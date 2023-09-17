@@ -561,7 +561,7 @@ and <code>value</code> that returns a modified object.</p>
 the <code>constructor</code> property:</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>range<span class="sc">@</span>constructor</span>
 <span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; function (start = class_missing, end = class_missing) </span></span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt; new_object(NULL, start = start, end = end)</span></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt; new_object(S7_object(), start = start, end = end)</span></span>
 <span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; &lt;environment: namespace:S7&gt;</span></span></code></pre></div>
 <p>In most cases, S7’s default constructor will all you need. However,
 in some cases you might want something custom. For example, for our
@@ -574,7 +574,7 @@ we could do:</p>
 <span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>    <span class="at">end =</span> class_numeric</span>
 <span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>  ),</span>
 <span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>  <span class="at">constructor =</span> <span class="cf">function</span>(x) {</span>
-<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>    <span class="fu">new_object</span>(<span class="cn">NULL</span>, <span class="at">start =</span> <span class="fu">min</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">end =</span> <span class="fu">max</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>    <span class="fu">new_object</span>(<span class="fu">S7_object</span>(), <span class="at">start =</span> <span class="fu">min</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">end =</span> <span class="fu">max</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
 <span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>  }</span>
 <span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>)</span>
 <span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
@@ -585,8 +585,10 @@ we could do:</p>
 <p>A constructor must always end with a call to
 <code>new_object()</code>. The first argument to
 <code>new_object()</code> should be an object of the <code>parent</code>
-class, or <code>NULL</code>, if there’s no parent (as here). That
-argument should be followed by one named argument for each property.</p>
+class (if you haven’t specified a <code>parent</code> argument to
+<code>new_class()</code>, then you should use <code>S7_object()</code>
+as the parent here). That argument should be followed by one named
+argument for each property.</p>
 <p>There’s one drawback of custom constructors that you should be aware:
 any subclass will also require a custom constructor.</p>
 </div>

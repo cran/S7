@@ -370,12 +370,13 @@ properties: a character <code>name</code> and a numeric
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">age =</span> class_numeric</span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>))</span>
 <span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>dog</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; &lt;S7_class&gt;</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; @ name  :  dog</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; @ parent: &lt;S7_object&gt;</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; @ properties:</span></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span></code></pre></div>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; &lt;dog&gt; class</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; @ parent     : &lt;S7_object&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; @ constructor: function(name, age) {...}</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; @ validator  : &lt;NULL&gt;</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; @ properties :</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span></code></pre></div>
 <p>S7 provides a number of built-in definitions that allow you to refer
 to existing base types that are not S7 classes. You can recognize these
 definitions because they all start with <code>class_</code>.</p>
@@ -400,12 +401,13 @@ supplied in <code>new_class()</code>:</p>
 <p>Given an object, you can retrieves its class
 <code>S7_class()</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">S7_class</span>(lola)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; &lt;S7_class&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; @ name  :  dog</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; @ parent: &lt;S7_object&gt;</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; @ properties:</span></span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span></code></pre></div>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; &lt;dog&gt; class</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; @ parent     : &lt;S7_object&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; @ constructor: function(name, age) {...}</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; @ validator  : &lt;NULL&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; @ properties :</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span></code></pre></div>
 <p>S7 objects also have an S3 <code>class()</code>. This is used for
 compatibility with existing S3 generics and you can learn more about it
 in <code>vignette(&quot;compatibility&quot;)</code>.</p>
@@ -476,19 +478,21 @@ duplicated specification. We first define the parent class:</p>
 <span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>dog <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;dog&quot;</span>, <span class="at">parent =</span> pet)</span>
 <span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a></span>
 <span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>cat</span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; &lt;S7_class&gt;</span></span>
-<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; @ name  :  cat</span></span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; @ parent: &lt;pet&gt;</span></span>
-<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; @ properties:</span></span>
-<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
-<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>dog</span>
-<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt; &lt;S7_class&gt;</span></span>
-<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; @ name  :  dog</span></span>
-<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; @ parent: &lt;pet&gt;</span></span>
-<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt; @ properties:</span></span>
-<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
-<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span></code></pre></div>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; &lt;cat&gt; class</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; @ parent     : &lt;pet&gt;</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; @ constructor: function(name, age) {...}</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; @ validator  : &lt;NULL&gt;</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; @ properties :</span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>dog</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; &lt;dog&gt; class</span></span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; @ parent     : &lt;pet&gt;</span></span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt; @ constructor: function(name, age) {...}</span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; @ validator  : &lt;NULL&gt;</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt; @ properties :</span></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co">#&gt;  $ name: &lt;character&gt;          </span></span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt;  $ age : &lt;integer&gt; or &lt;double&gt;</span></span></code></pre></div>
 <p>Because we have created new classes, we need to recreate the existing
 <code>lola</code> and <code>fluffy</code> objects:</p>
 <div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>lola <span class="ot">&lt;-</span> <span class="fu">dog</span>(<span class="at">name =</span> <span class="st">&quot;Lola&quot;</span>, <span class="at">age =</span> <span class="dv">11</span>)</span>
@@ -543,7 +547,7 @@ of one of those methods:</p>
 <span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a><span class="co">#&gt; {</span></span>
 <span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="co">#&gt;     paste0(x@name, &quot; is &quot;, x@age, &quot; years old&quot;)</span></span>
 <span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="co">#&gt; }</span></span>
-<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co">#&gt; &lt;bytecode: 0x10fe1b4b0&gt;</span></span></code></pre></div>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co">#&gt; &lt;bytecode: 0x119e2fdb0&gt;</span></span></code></pre></div>
 <p>Learn more about method dispatch in
 <code>vignette(&quot;generics-methods&quot;)</code>.</p>
 </div>

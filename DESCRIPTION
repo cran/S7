@@ -1,7 +1,7 @@
 Package: S7
 Title: An Object Oriented System Meant to Become a Successor to S3 and
         S4
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person("Object-Oriented Programming Working Group", role = "cph"),
     person("Davis", "Vaughan", role = "aut"),
@@ -23,9 +23,9 @@ Description: A new object oriented programming system designed to be a successor
   which includes representatives from R-Core, 'Bioconductor', 
   'Posit'/'tidyverse', and the wider R community.
 License: MIT + file LICENSE
-URL: https://github.com/rconsortium/OOP-WG/,
-        https://rconsortium.github.io/OOP-WG/
-BugReports: https://github.com/rconsortium/OOP-WG/issues
+URL: https://github.com/rconsortium/S7/,
+        https://rconsortium.github.io/S7/
+BugReports: https://github.com/rconsortium/S7/issues
 Depends: R (>= 3.5.0)
 Imports: utils
 Suggests: bench, covr, knitr, methods, rmarkdown, testthat (>= 3.0.0),
@@ -36,7 +36,7 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
-Packaged: 2023-08-22 19:51:16 UTC; hadleywickham
+Packaged: 2023-09-17 11:50:09 UTC; hadleywickham
 Author: Object-Oriented Programming Working Group [cph],
   Davis Vaughan [aut],
   Jim Hester [aut] (<https://orcid.org/0000-0002-2739-7082>),
@@ -48,4 +48,4 @@ Author: Object-Oriented Programming Working Group [cph],
   Hadley Wickham [aut, cre] (<https://orcid.org/0000-0003-4757-117X>)
 Maintainer: Hadley Wickham <hadley@posit.co>
 Repository: CRAN
-Date/Publication: 2023-08-24 08:50:02 UTC
+Date/Publication: 2023-09-17 12:10:02 UTC

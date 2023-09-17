@@ -343,12 +343,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p>This vignette outlines the most important things you need to know
 about using S7 in a package. S7 is new, so few people have used it in a
 package yet; this means that this vignette is likely incomplete, and
-we’d love your help to make it better. Please <a href="https://github.com/RConsortium/OOP-WG/issues/new">let us know</a>
-if you have questions that this vignette doesn’t answer.</p>
+we’d love your help to make it better. Please <a href="https://github.com/RConsortium/S7/issues/new">let us know</a> if
+you have questions that this vignette doesn’t answer.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(S7)</span></code></pre></div>
 <div id="method-registration" class="section level2">
 <h2>Method registration</h2>
-<p>You should alwys call <code>methods_register()</code> in your
+<p>You should always call <code>methods_register()</code> in your
 <code>.onLoad()</code>:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>.onLoad <span class="ot">&lt;-</span> <span class="cf">function</span>(...) {</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  S7<span class="sc">::</span><span class="fu">methods_register</span>()</span>
@@ -376,12 +376,12 @@ are!). If you expect others to create their own methods for your
 generic, you may want to include an section describing the the
 properties that you expect all methods to have. We plan to provide a an
 easy way to all methods for a generic, but have not yet implemented it.
-You can track progress at <a href="https://github.com/RConsortium/OOP-WG/issues/167" class="uri">https://github.com/RConsortium/OOP-WG/issues/167</a>.</p>
+You can track progress at <a href="https://github.com/RConsortium/S7/issues/167" class="uri">https://github.com/RConsortium/S7/issues/167</a>.</p>
 <p>We don’t currently have any recommendations on documenting methods.
 There’s no need to document them in order to pass
 <code>R CMD check</code>, but obviously there are cases where it’s nice
 to provide additional details for a method, particularly if it takes
-extra arguments compared to the generic. We’re tracking that issue at <a href="https://github.com/RConsortium/OOP-WG/issues/315" class="uri">https://github.com/RConsortium/OOP-WG/issues/315</a>.</p>
+extra arguments compared to the generic. We’re tracking that issue at <a href="https://github.com/RConsortium/S7/issues/315" class="uri">https://github.com/RConsortium/S7/issues/315</a>.</p>
 </div>
 <div id="backward-compatibility" class="section level2">
 <h2>Backward compatibility</h2>

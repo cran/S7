@@ -374,9 +374,9 @@ though as this is implemented in a package there is some overhead due to
 <span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 6</span></span>
 <span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co">#&gt;   expression      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a><span class="co">#&gt;   &lt;bch:expr&gt; &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt; 1 foo_S7(x)    4.55µs   5.08µs   183376.        0B     55.0</span></span>
-<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; 2 foo_S3(x)    1.23µs   1.39µs   639826.        0B     64.0</span></span>
-<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; 3 foo_S4(x)    1.31µs   1.52µs   601461.        0B     60.2</span></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt; 1 foo_S7(x)    4.55µs      5µs   192830.        0B     57.9</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; 2 foo_S3(x)    1.23µs   1.35µs   661710.        0B     66.2</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; 3 foo_S4(x)    1.35µs   1.52µs   620031.        0B      0</span></span>
 <span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a></span>
 <span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a>bar_S7 <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;bar_S7&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>))</span>
 <span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="fu">method</span>(bar_S7, <span class="fu">list</span>(text, number)) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-&quot;</span>, y, <span class="st">&quot;-bar&quot;</span>)</span>
@@ -390,8 +390,8 @@ though as this is implemented in a package there is some overhead due to
 <span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 6</span></span>
 <span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a><span class="co">#&gt;   expression        min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a><span class="co">#&gt;   &lt;bch:expr&gt;   &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co">#&gt; 1 bar_S7(x, y)   8.04µs   8.86µs   106807.        0B     42.7</span></span>
-<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a><span class="co">#&gt; 2 bar_S4(x, y)   3.77µs   4.18µs   223641.        0B     22.4</span></span></code></pre></div>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co">#&gt; 1 bar_S7(x, y)   7.95µs   8.61µs   111847.        0B     56.0</span></span>
+<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a><span class="co">#&gt; 2 bar_S4(x, y)   3.77µs    4.1µs   235555.        0B     23.6</span></span></code></pre></div>
 <p>A potential optimization is caching based on the class names, but
 lookup should be fast without this.</p>
 <p>The following benchmark generates a class hierarchy of different
@@ -449,26 +449,26 @@ the overhead is basically negligible.</p>
 <span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a><span class="co">#&gt; # A tibble: 20 × 8</span></span>
 <span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a><span class="co">#&gt;    expression num_classes class_nchar      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a><span class="co">#&gt;    &lt;bch:expr&gt;       &lt;dbl&gt;       &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   4.59µs   5.08µs   185038.        0B     55.5</span></span>
-<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15   4.71µs   5.33µs   174154.        0B     52.3</span></span>
-<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   4.59µs   5.12µs   182587.        0B     73.1</span></span>
-<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15   4.76µs   5.29µs   180074.        0B     54.0</span></span>
-<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   4.59µs   5.17µs   181353.        0B     72.6</span></span>
-<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   4.88µs   5.49µs   170799.        0B     51.3</span></span>
-<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15   4.92µs   5.49µs   166707.        0B     66.7</span></span>
-<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   6.23µs   6.89µs   136191.        0B     40.9</span></span>
-<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   5.33µs    5.9µs   158973.        0B     63.6</span></span>
-<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15   8.08µs   8.81µs   107820.        0B     32.4</span></span>
-<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   4.59µs   5.21µs   180945.        0B     72.4</span></span>
-<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100      5µs   5.58µs   166365.        0B     49.9</span></span>
-<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100   4.71µs   5.37µs   170532.        0B     51.2</span></span>
-<span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   5.33µs   5.95µs   156466.        0B     62.6</span></span>
-<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100   4.76µs   5.37µs   174363.        0B     52.3</span></span>
-<span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   6.11µs   6.64µs   140211.        0B     42.1</span></span>
-<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   5.08µs   5.66µs   163972.        0B     49.2</span></span>
-<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  11.15µs   12.1µs    79485.        0B     31.8</span></span>
-<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   5.21µs   5.66µs   167653.        0B     67.1</span></span>
-<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100   16.4µs  17.06µs    56685.        0B     17.0</span></span></code></pre></div>
+<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   4.55µs      5µs   195762.        0B     58.7</span></span>
+<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15   4.67µs   5.12µs   191035.        0B     76.4</span></span>
+<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   4.55µs      5µs   194971.        0B     58.5</span></span>
+<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15   4.71µs   5.21µs   187491.        0B     75.0</span></span>
+<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   4.63µs   5.12µs   188134.        0B     75.3</span></span>
+<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   4.96µs   5.41µs   180300.        0B     54.1</span></span>
+<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15   4.88µs   5.37µs   181461.        0B     72.6</span></span>
+<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   6.36µs   6.85µs   142644.        0B     42.8</span></span>
+<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   5.25µs   5.74µs   170367.        0B     68.2</span></span>
+<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15   8.12µs   8.69µs   112610.        0B     33.8</span></span>
+<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   4.51µs   5.04µs   192639.        0B     77.1</span></span>
+<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100    4.8µs   5.29µs   182849.        0B     73.2</span></span>
+<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100   4.63µs   5.12µs   188750.        0B     75.5</span></span>
+<span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   4.92µs   5.54µs   176693.        0B     53.0</span></span>
+<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100   4.76µs   5.25µs   184134.        0B     55.3</span></span>
+<span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   5.95µs   6.44µs   151700.        0B     60.7</span></span>
+<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   4.84µs   5.37µs   180968.        0B     72.4</span></span>
+<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  10.95µs  11.44µs    86264.        0B     34.5</span></span>
+<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   5.25µs   5.54µs   178132.        0B     71.3</span></span>
+<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100  16.65µs  17.14µs    57669.        0B     23.1</span></span></code></pre></div>
 <p>And the same benchmark using double-dispatch</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">press</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">num_classes =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">50</span>, <span class="dv">100</span>),</span>
@@ -508,26 +508,26 @@ the overhead is basically negligible.</p>
 <span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co">#&gt; # A tibble: 20 × 8</span></span>
 <span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a><span class="co">#&gt;    expression num_classes class_nchar      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a><span class="co">#&gt;    &lt;bch:expr&gt;       &lt;dbl&gt;       &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   5.41µs   5.78µs   165060.        0B     66.1</span></span>
-<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15   5.66µs   6.03µs   158615.        0B     63.5</span></span>
-<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   5.45µs   5.82µs   163255.        0B     65.3</span></span>
-<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15   5.82µs   6.36µs   151006.        0B     60.4</span></span>
-<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   5.54µs   6.15µs   154460.        0B     61.8</span></span>
-<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   6.23µs   6.81µs   140228.        0B     56.1</span></span>
-<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15   6.03µs   6.68µs   142722.        0B     57.1</span></span>
-<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   8.73µs   9.35µs   102677.        0B     51.4</span></span>
-<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   6.76µs   7.42µs   126032.        0B     63.0</span></span>
-<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15  12.05µs  12.91µs    73986.        0B     37.0</span></span>
-<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   5.45µs   6.11µs   153112.        0B     61.3</span></span>
-<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100   6.36µs   7.01µs   134501.        0B     53.8</span></span>
-<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100   5.45µs   6.11µs   154559.        0B     61.8</span></span>
-<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   6.48µs   7.13µs   133415.        0B     53.4</span></span>
-<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100    5.9µs   6.64µs   142185.        0B     56.9</span></span>
-<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   7.58µs   8.36µs   112881.        0B     45.2</span></span>
-<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   6.36µs   7.09µs   133867.        0B     53.6</span></span>
-<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  17.34µs  18.37µs    52561.        0B     26.3</span></span>
-<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   6.89µs   7.58µs   122626.        0B     61.3</span></span>
-<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100  31.73µs  33.13µs    29327.        0B     14.7</span></span></code></pre></div>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   5.41µs   5.82µs   165292.        0B     82.7</span></span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15    5.7µs   6.15µs   157902.        0B     63.2</span></span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   5.41µs    5.9µs   165632.        0B     66.3</span></span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15   5.78µs   6.27µs   155876.        0B     62.4</span></span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   5.54µs   5.99µs   162462.        0B     65.0</span></span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   6.03µs   6.52µs   150108.        0B     60.1</span></span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15   6.07µs   6.56µs   148440.        0B     59.4</span></span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   8.57µs   9.14µs   106982.        0B     53.5</span></span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   6.81µs    7.3µs   133233.        0B     66.6</span></span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15  12.14µs  12.75µs    76864.        0B     38.5</span></span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   5.82µs    6.4µs   150848.        0B     75.5</span></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100   6.52µs   7.09µs   137028.        0B     54.8</span></span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100   5.82µs   6.36µs   152363.        0B     61.0</span></span>
+<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   7.22µs   7.75µs   125326.        0B     50.2</span></span>
+<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100   5.78µs   6.31µs   152658.        0B     61.1</span></span>
+<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   8.65µs   9.31µs   104963.        0B     42.0</span></span>
+<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   6.07µs    6.6µs   146713.        0B     73.4</span></span>
+<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  17.34µs  18.12µs    54393.        0B     27.2</span></span>
+<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   6.89µs   7.22µs   136725.        0B     68.4</span></span>
+<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100  30.01µs  30.59µs    32264.        0B     16.1</span></span></code></pre></div>
 
 
 

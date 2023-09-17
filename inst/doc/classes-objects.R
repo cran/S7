@@ -137,7 +137,7 @@ range <- new_class("range",
     end = class_numeric
   ),
   constructor = function(x) {
-    new_object(NULL, start = min(x, na.rm = TRUE), end = max(x, na.rm = TRUE))
+    new_object(S7_object(), start = min(x, na.rm = TRUE), end = max(x, na.rm = TRUE))
   }
 )
 
