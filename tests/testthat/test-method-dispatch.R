@@ -72,9 +72,32 @@ test_that("can substitute() args", {
   )
   expect_equal(foo("x", y = letters), quote(letters))
 
-  # Doesn't work currently
-  # method(foo, class_character) <- function(x, ..., z = 1) substitute(z)
-  # expect_equal(foo("x", z = letters), quote(letters))
+  suppressMessages(
+    method(foo, class_character) <- function(x, ..., z = 1) substitute(z)
+  )
+  expect_equal(foo("x", z = letters), quote(letters))
+
+  suppressMessages(
+    method(foo, class_character) <- function(x, ..., z = 1) substitute(list(...))
+  )
+  expect_equal(foo("x", abc = xyz), quote(list(abc = xyz)))
+
+  suppressMessages(
+    method(foo, class_character) <- function(x, ..., z = 1, y) missing(y)
+  )
+  expect_true(foo("x"), TRUE)
+  expect_true(foo("x", y =), TRUE)
+    expect_true(foo("x", y =), TRUE)
+
+  suppressMessages(
+    method(foo, class_character) <- function(x, ..., z = 1, y) ...length()
+  )
+
+  expect_equal(foo("x"), 0)
+  expect_equal(foo("x", y =), 0)
+  expect_equal(foo("x", y =, abc), 1)
+  expect_equal(foo("x", y =, abc = xyz), 1)
+  expect_equal(foo("x", y =, abc, xyz), 2)
 })
 
 test_that("methods get values modified in the generic", {
@@ -133,7 +156,7 @@ test_that("can dispatch on base 'union' types", {
 test_that("single dispatch fails with informative messages", {
   fail <- new_generic("fail", "x")
 
-  foo <- new_class("foo")
+  foo <- new_class("foo", package = NULL)
   Foo <- setClass("Foo", slots = list("x" = "numeric"))
   on.exit(S4_remove_classes("Foo"))
 
@@ -143,6 +166,8 @@ test_that("single dispatch fails with informative messages", {
     fail(foo())
     fail(Foo(x = 1))
   })
+
+  expect_error(fail(TRUE), class = "S7_error_method_not_found")
 })
 
 test_that("multiple dispatch fails with informative messages", {
@@ -157,6 +182,8 @@ test_that("multiple dispatch fails with informative messages", {
     fail(, TRUE)
     fail(TRUE, TRUE)
   })
+
+  expect_error(fail(TRUE, TRUE), class = "S7_error_method_not_found")
 })
 
 
@@ -181,4 +208,40 @@ test_that("can dispatch on evaluated arguments", {
   })
   method(my_generic, class_numeric) <- function(x) 100
   expect_equal(my_generic("x"), 100)
+})
+
+
+test_that("method dispatch works for class_missing", {
+
+  foo <- new_generic("foo", "x")
+  method(foo, class_missing) <- function(x) missing(x)
+
+  expect_true(foo())
+
+  # dispatch on class_missing only works directly in the generic call
+  foo_wrapper <- function(xx) foo(xx)
+  expect_snapshot(
+    error = TRUE,
+    variant = if (getRversion() < "4.3") "R-lt-4-3",
+    foo_wrapper()
+  )
+})
+
+test_that("errors from dispatched methods have reasonable tracebacks", {
+
+  get_call_stack <- function(n = 3) {
+    x <- sys.calls()
+    x <- x[-length(x)] # remove get_call_stack()
+    x <- tail(x, n)
+    lapply(x, utils::removeSource)
+  }
+
+  my_generic <- new_generic("my_generic", "x")
+  method(my_generic, class_numeric) <- function(x) get_call_stack()
+  expect_snapshot(my_generic(10))
+
+  my_generic <- new_generic("my_generic", c("x", "y"))
+  method(my_generic, list(class_numeric, class_numeric)) <-
+    function(x, y) get_call_stack()
+  expect_snapshot(my_generic(3, 4))
 })

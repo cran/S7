@@ -9,21 +9,18 @@
 #'
 #' @param name The name of the class, as a string. The result of calling
 #'   `new_class()` should always be assigned to a variable with this name,
-#'   i.e. `foo <- new_class("foo")`.
+#'   i.e. `Foo <- new_class("Foo")`.
 #' @param parent The parent class to inherit behavior from.
 #'   There are three options:
 #'
 #'   * An S7 class, like [S7_object].
 #'   * An S3 class wrapped by [new_S3_class()].
 #'   * A base type, like [class_logical], [class_integer], etc.
-#' @param package Package name. It is good practice to set the package
-#'   name when exporting an S7 class from a package because it prevents
-#'   clashes if two packages happen to export a class with the same
-#'   name.
+#' @param package Package name. This is automatically resolved if the class is
+#'   defined in a package, and `NULL` otherwise.
 #'
-#'   Setting `package` implies that the class is available for external use,
-#'   so should be accompanied by exporting the constructor. Learn more
-#'   in `vignette("packages")`.
+#'   Note, if the class is intended for external use, the constructor should be
+#'   exported. Learn more in `vignette("packages")`.
 #' @param abstract Is this an abstract class? An abstract class can not be
 #'   instantiated.
 #' @param constructor The constructor function. In most cases, you can rely
@@ -59,13 +56,13 @@
 #' @export
 #' @examples
 #' # Create an class that represents a range using a numeric start and end
-#' range <- new_class("range",
+#' Range <- new_class("Range",
 #'   properties = list(
 #'     start = class_numeric,
 #'     end = class_numeric
 #'   )
 #' )
-#' r <- range(start = 10, end = 20)
+#' r <- Range(start = 10, end = 20)
 #' r
 #' # get and set properties with @
 #' r@start
@@ -73,11 +70,11 @@
 #' r@end
 #'
 #' # S7 automatically ensures that properties are of the declared types:
-#' try(range(start = "hello", end = 20))
+#' try(Range(start = "hello", end = 20))
 #'
 #' # But we might also want to use a validator to ensure that start and end
 #' # are length 1, and that start is < end
-#' range <- new_class("range",
+#' Range <- new_class("Range",
 #'   properties = list(
 #'     start = class_numeric,
 #'     end = class_numeric
@@ -92,15 +89,15 @@
 #'     }
 #'   }
 #' )
-#' try(range(start = c(10, 15), end = 20))
-#' try(range(start = 20, end = 10))
+#' try(Range(start = c(10, 15), end = 20))
+#' try(Range(start = 20, end = 10))
 #'
-#' r <- range(start = 10, end = 20)
+#' r <- Range(start = 10, end = 20)
 #' try(r@start <- 25)
 new_class <- function(
     name,
     parent = S7_object,
-    package = NULL,
+    package = topNamespaceName(parent.frame()),
     properties = list(),
     abstract = FALSE,
     constructor = NULL,
@@ -122,7 +119,7 @@ new_class <- function(
     if (!is.null(validator)) {
       check_function(validator, alist(self = ))
     }
-    if (abstract && !(parent@abstract || parent@name == "S7_object")) {
+    if (abstract && (!is_class(parent) || !(parent@abstract || parent@name == "S7_object"))) {
       stop("Abstract classes must have abstract parents")
     }
   }
@@ -130,10 +127,13 @@ new_class <- function(
   # Combine properties from parent, overriding as needed
   all_props <- attr(parent, "properties", exact = TRUE) %||% list()
   new_props <- as_properties(properties)
+  check_prop_names(new_props)
   all_props[names(new_props)] <- new_props
 
   if (is.null(constructor)) {
-    constructor <- new_constructor(parent, all_props)
+    constructor <- new_constructor(parent, all_props,
+                                   envir = parent.frame(),
+                                   package = package)
   }
 
   object <- constructor
@@ -252,25 +252,29 @@ new_object <- function(.parent, ...) {
     stop(msg)
   }
 
-  args <- list(...)
-  nms <- names(args)
-
+  # force .parent before ...
   # TODO: Some type checking on `.parent`?
   object <- .parent
-  attr(object, "S7_class") <- class
-  class(object) <- class_dispatch(class)
 
-  supplied_props <- nms[!vlapply(args, is_class_missing)]
-  for (prop in supplied_props) {
-    prop(object, prop, check = FALSE) <- args[[prop]]
+  args <- list(...)
+  if ("" %in% names2(args)) {
+    stop("All arguments to `...` must be named")
   }
 
-  # We have to fill in missing values after setting the initial properties,
-  # because custom setters might set property values
-  missing_props <- setdiff(nms, union(supplied_props, names(attributes(object))))
-  for (prop in missing_props) {
-    prop(object, prop, check = FALSE) <- prop_default(class@properties[[prop]])
-  }
+  has_setter <- vlapply(class@properties[names(args)], prop_has_setter)
+
+  attrs <- c(
+    list(class = class_dispatch(class), S7_class = class),
+    args[!has_setter],
+    attributes(object)
+  )
+  attrs <- attrs[!duplicated(names(attrs))]
+  attributes(object) <- attrs
+
+  # invoke custom property setters
+  prop_setter_vals <- args[has_setter]
+  for (name in names(prop_setter_vals))
+    prop(object, name, check = FALSE) <- prop_setter_vals[[name]]
 
   # Don't need to validate if parent class already validated,
   # i.e. it's a non-abstract S7 class
@@ -298,7 +302,7 @@ str.S7_object <- function(object, ..., nest.lev = 0) {
     if (is.environment(object)) {
       attributes(object) <- NULL
     } else {
-      attributes(object) <- list(names = names(object))
+      attributes(object) <- list(names = names(object), dim = dim(object))
     }
 
     str(object, nest.lev = nest.lev)
@@ -318,8 +322,21 @@ str.S7_object <- function(object, ..., nest.lev = 0) {
 #' @returns An [S7 class][new_class].
 #' @export
 #' @examples
-#' foo <- new_class("foo")
-#' S7_class(foo())
+#' Foo <- new_class("Foo")
+#' S7_class(Foo())
 S7_class <- function(object) {
   attr(object, "S7_class", exact = TRUE)
+}
+
+
+check_prop_names <- function(properties, error_call = sys.call(-1L)) {
+  # these attributes have special C handlers in base R
+  forbidden <- c("names", "dim", "dimnames", "class",
+                 "tsp", "comment", "row.names", "...")
+  forbidden <- intersect(forbidden, names(properties))
+  if (length(forbidden)) {
+    msg <- paste0("property can't be named: ",
+                  paste0(forbidden, collapse = ", "))
+    stop(simpleError(msg, error_call))
+  }
 }

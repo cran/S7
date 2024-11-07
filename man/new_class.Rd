@@ -8,7 +8,7 @@
 new_class(
   name,
   parent = S7_object,
-  package = NULL,
+  package = topNamespaceName(parent.frame()),
   properties = list(),
   abstract = FALSE,
   constructor = NULL,
@@ -20,7 +20,7 @@ new_object(.parent, ...)
 \arguments{
 \item{name}{The name of the class, as a string. The result of calling
 \code{new_class()} should always be assigned to a variable with this name,
-i.e. \code{foo <- new_class("foo")}.}
+i.e. \code{Foo <- new_class("Foo")}.}
 
 \item{parent}{The parent class to inherit behavior from.
 There are three options:
@@ -30,14 +30,11 @@ There are three options:
 \item A base type, like \link{class_logical}, \link{class_integer}, etc.
 }}
 
-\item{package}{Package name. It is good practice to set the package
-name when exporting an S7 class from a package because it prevents
-clashes if two packages happen to export a class with the same
-name.
+\item{package}{Package name. This is automatically resolved if the class is
+defined in a package, and \code{NULL} otherwise.
 
-Setting \code{package} implies that the class is available for external use,
-so should be accompanied by exporting the constructor. Learn more
-in \code{vignette("packages")}.}
+Note, if the class is intended for external use, the constructor should be
+exported. Learn more in \code{vignette("packages")}.}
 
 \item{properties}{A named list specifying the properties (data) that
 belong to each instance of the class. Each element of the list can
@@ -89,13 +86,13 @@ Learn more in \code{vignette("classes-objects")}
 }
 \examples{
 # Create an class that represents a range using a numeric start and end
-range <- new_class("range",
+Range <- new_class("Range",
   properties = list(
     start = class_numeric,
     end = class_numeric
   )
 )
-r <- range(start = 10, end = 20)
+r <- Range(start = 10, end = 20)
 r
 # get and set properties with @
 r@start
@@ -103,11 +100,11 @@ r@end <- 40
 r@end
 
 # S7 automatically ensures that properties are of the declared types:
-try(range(start = "hello", end = 20))
+try(Range(start = "hello", end = 20))
 
 # But we might also want to use a validator to ensure that start and end
 # are length 1, and that start is < end
-range <- new_class("range",
+Range <- new_class("Range",
   properties = list(
     start = class_numeric,
     end = class_numeric
@@ -122,9 +119,9 @@ range <- new_class("range",
     }
   }
 )
-try(range(start = c(10, 15), end = 20))
-try(range(start = 20, end = 10))
+try(Range(start = c(10, 15), end = 20))
+try(Range(start = 20, end = 10))
 
-r <- range(start = 10, end = 20)
+r <- Range(start = 10, end = 20)
 try(r@start <- 25)
 }

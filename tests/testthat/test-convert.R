@@ -1,5 +1,6 @@
 test_that("can register convert methods", {
-  converttest <- new_class("converttest")
+  local_methods(convert)
+  converttest <- new_class("converttest", package = NULL)
   method(convert, list(converttest, class_character)) <- function(from, to, ...) "c"
   method(convert, list(converttest, class_integer)) <- function(from, to, ...) "i"
 
@@ -12,6 +13,7 @@ test_that("can register convert methods", {
 })
 
 test_that("doesn't convert to subclass", {
+  local_methods(convert)
   converttest1 <- new_class("converttest1")
   converttest2 <- new_class("converttest2", converttest1)
 
@@ -20,9 +22,11 @@ test_that("doesn't convert to subclass", {
 })
 
 describe("fallback convert", {
+  local_methods(convert)
+
   it("can convert to own class", {
-    foo1 <- new_class("foo1")
-    foo2 <- new_class("foo2", foo1)
+    foo1 <- new_class("foo1", package = NULL)
+    foo2 <- new_class("foo2", foo1, package = NULL)
 
     obj <- convert(foo2(), to = foo2)
     expect_equal(class(obj), c("foo2", "foo1", "S7_object"))
@@ -30,14 +34,46 @@ describe("fallback convert", {
   })
 
   it("can convert to super class", {
-    foo1 <- new_class("foo1", properties = list(x = class_double))
-    foo2 <- new_class("foo2", foo1, properties = list(y = class_double))
+    foo1 <- new_class("foo1", properties = list(x = class_double), package = NULL)
+    foo2 <- new_class("foo2", foo1, properties = list(y = class_double), package = NULL)
 
     obj <- convert(foo2(1, 2), to = foo1)
     expect_equal(class(obj), c("foo1", "S7_object"))
     expect_equal(S7_class(obj), foo1)
     expect_equal(props(obj), list(x = 1))
     expect_equal(attr(obj, "y"), NULL)
+  })
+
+  it("can convert to subclass", {
+    Foo <- new_class("Foo", properties = list(x = class_numeric))
+    Bar <- new_class("Bar", Foo, properties = list(y = class_numeric))
+
+    foo <- Foo(x = 1)
+
+    # Basic conversion
+    bar <- convert(foo, Bar)
+    expect_s3_class(bar, c("Bar", "Foo", "S7_object"))
+    expect_equal(S7_class(bar), Bar)
+    expect_equal(bar@x, 1)
+    expect_equal(bar@y, numeric(0))
+
+    # Overriding existing property
+    bar <- convert(foo, Bar, x = 2)
+    expect_equal(bar@x, 2)
+
+    # Setting new property
+    bar <- convert(foo, Bar, y = 2)
+    expect_equal(bar@x, 1)
+    expect_equal(bar@y, 2)
+
+    # Setting both properties
+    bar <- convert(foo, Bar, y = 2, x = 3)
+    expect_equal(bar@x, 3)
+    expect_equal(bar@y, 2)
+
+    # Error on converting to unrelated class
+    Unrelated <- new_class("Unrelated", properties = list(z = class_character))
+    expect_error(convert(foo, Unrelated), "Can't find method")
   })
 
   it("can convert to S3 class", {

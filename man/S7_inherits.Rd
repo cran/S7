@@ -29,14 +29,21 @@ S7 object without testing for a specific class.}
 \item \code{check_is_S7()} throws an error if \code{x} isn't the specified \code{class}.
 }
 }
+\note{
+Starting with \R 4.3.0, \code{base::inherits()} can accept an S7 class as
+the second argument, supporting usage like \code{inherits(x, Foo)}.
+}
 \examples{
-foo1 <- new_class("foo1")
-foo2 <- new_class("foo2")
+Foo1 <- new_class("Foo1")
+Foo2 <- new_class("Foo2")
 
-S7_inherits(foo1(), foo1)
-check_is_S7(foo1())
-check_is_S7(foo1(), foo1)
+S7_inherits(Foo1(), Foo1)
+check_is_S7(Foo1())
+check_is_S7(Foo1(), Foo1)
 
-S7_inherits(foo1(), foo2)
-try(check_is_S7(foo1(), foo2))
+S7_inherits(Foo1(), Foo2)
+try(check_is_S7(Foo1(), Foo2))
+
+if (getRversion() >= "4.3.0")
+  inherits(Foo1(), Foo1)
 }

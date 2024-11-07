@@ -10,7 +10,6 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 [![R-CMD-check](https://github.com/RConsortium/S7/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RConsortium/S7/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/RConsortium/S7/branch/main/graph/badge.svg)](https://app.codecov.io/gh/RConsortium/S7?branch=main)
-
 <!-- badges: end -->
 
 The S7 package is a new OOP system designed to be a successor to S3 and

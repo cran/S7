@@ -10,17 +10,23 @@
 #' @returns
 #' * `S7_inherits()` returns a single `TRUE` or `FALSE`.
 #' * `check_is_S7()` returns nothing; it's called for its side-effects.
+#'
+#' @note Starting with \R 4.3.0, `base::inherits()` can accept an S7 class as
+#' the second argument, supporting usage like `inherits(x, Foo)`.
 #' @export
 #' @examples
-#' foo1 <- new_class("foo1")
-#' foo2 <- new_class("foo2")
+#' Foo1 <- new_class("Foo1")
+#' Foo2 <- new_class("Foo2")
 #'
-#' S7_inherits(foo1(), foo1)
-#' check_is_S7(foo1())
-#' check_is_S7(foo1(), foo1)
+#' S7_inherits(Foo1(), Foo1)
+#' check_is_S7(Foo1())
+#' check_is_S7(Foo1(), Foo1)
 #'
-#' S7_inherits(foo1(), foo2)
-#' try(check_is_S7(foo1(), foo2))
+#' S7_inherits(Foo1(), Foo2)
+#' try(check_is_S7(Foo1(), Foo2))
+#'
+#' if (getRversion() >= "4.3.0")
+#'   inherits(Foo1(), Foo1)
 S7_inherits <- function(x, class = NULL) {
   if (!(is.null(class) || inherits(class, "S7_class"))) {
     stop("`class` must be an <S7_class> or NULL")
@@ -32,6 +38,7 @@ S7_inherits <- function(x, class = NULL) {
 
 #' @export
 #' @rdname S7_inherits
+# called from src/prop.c
 check_is_S7 <- function(x, class = NULL, arg = deparse(substitute(x))) {
   if (S7_inherits(x, class)) {
     return(invisible())

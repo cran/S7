@@ -1,18 +1,20 @@
 new_base_class <- function(name, constructor_name = name) {
   force(name)
 
-  constructor <- function(.data = class_missing) {
-    if (is_class_missing(.data)) {
-      .data <- base_default(name)
-    }
-    .data
-  }
+  constructor <- new_function(
+    args = list(.data = base_default(name)),
+    body = quote(.data),
+    env = baseenv()
+  )
 
   validator <- function(object) {
     if (base_class(object) != name) {
-      sprintf("Underlying data must be <%s> not <%s>", name, base_class(object))
+      sprintf("Underlying data must be <%s> not <%s>",
+              name, base_class(object))
     }
   }
+
+  validator <- utils::removeSource(validator)
 
   out <- list(
     class = name,
@@ -22,6 +24,11 @@ new_base_class <- function(name, constructor_name = name) {
   )
   class(out) <- "S7_base_class"
   out
+}
+
+#' @rawNamespace if (getRversion() >= "4.3.0") S3method(nameOfClass,S7_base_class)
+nameOfClass.S7_base_class <- function(x) {
+  x[["class"]]
 }
 
 base_default <- function(type) {
@@ -34,9 +41,11 @@ base_default <- function(type) {
     raw = raw(),
     list = list(),
     expression = expression(),
+    name = quote(quote(x)),
+    call = quote(quote({})),
 
-    `function` = function() {},
-    environment = new.env(parent = emptyenv())
+    `function` = quote(function() NULL),
+    environment = quote(new.env(parent = emptyenv()))
 )}
 
 
@@ -54,13 +63,11 @@ str.S7_base_class <- function(object, ..., nest.lev = 0) {
   print(object, ..., nest.lev = nest.lev)
 }
 
-#' Base classes
+#' S7 wrappers for base types
 #'
 #' @description
-#' These classes represent base types allowing them to be used within S7.
-#' There are three categories: base types, unions types, and key S3 classes.
-#'
-#' Base types:
+#' The following S7 classes represent base types allowing them to be used
+#' within S7:
 #'
 #' * `class_logical`
 #' * `class_integer`
@@ -70,23 +77,20 @@ str.S7_base_class <- function(object, ..., nest.lev = 0) {
 #' * `class_raw`
 #' * `class_list`
 #' * `class_expression`
+#' * `class_name`
+#' * `class_call`
 #' * `class_function`
 #' * `class_environment` (can only be used for properties)
 #'
-#' Union types:
+#' We also include three union types to model numerics, atomics, and vectors
+#' respectively:
 #'
 #' * `class_numeric` is a union of `class_integer` and `class_double`.
 #' * `class_atomic` is a union of `class_logical`, `class_numeric`,
 #'   `class_complex`, `class_character`, and `class_raw`.
 #' * `class_vector` is a union of `class_atomic`, `class_list`, and
 #'   `class_expression`.
-#'
-#' Key S3 classes:
-#'
-#' * `class_data.frame`
-#' * `class_Date`
-#' * `class_factor`
-#' * `class_POSIXct`
+#' * `class_language` is a union of `class_name` and `class_call`.
 #'
 #' @order 0
 #' @name base_classes
@@ -150,6 +154,18 @@ class_expression <- new_base_class("expression")
 #' @rdname base_classes
 #' @format NULL
 #' @order 1
+class_name <- new_base_class("name")
+
+#' @export
+#' @rdname base_classes
+#' @format NULL
+#' @order 1
+class_call <- new_base_class("call")
+
+#' @export
+#' @rdname base_classes
+#' @format NULL
+#' @order 1
 class_function <- new_base_class("function", "fun")
 
 #' @export
@@ -176,9 +192,16 @@ class_atomic <- NULL
 #' @order 2
 class_vector <- NULL
 
+#' @export
+#' @rdname base_classes
+#' @format NULL
+#' @order 2
+class_language <- NULL
+
 # Define onload to avoid dependencies between files
 on_load_define_union_classes <- function() {
   class_numeric <<- new_union(class_integer, class_double)
   class_atomic <<- new_union(class_logical, class_numeric, class_complex, class_character, class_raw)
   class_vector <<- new_union(class_atomic, class_expression, class_list)
+  class_language <<- new_union(class_name, class_call)
 }

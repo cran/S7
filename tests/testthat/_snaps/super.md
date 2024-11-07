@@ -1,10 +1,11 @@
 # super(): checks to
 
     Code
-      foo <- new_class("foo")
+      foo <- new_class("foo", package = NULL)
       super(foo(), class_character)
-    Error <simpleError>
-      <foo> doesn't inherit from <character>
+    Condition
+      Error in `super()`:
+      ! <foo> doesn't inherit from <character>
 
 # super(): displays nicely
 

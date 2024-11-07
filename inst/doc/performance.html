@@ -49,7 +49,7 @@ overflow: visible;
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +60,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -344,54 +344,54 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p>The dispatch performance should be roughly on par with S3 and S4,
 though as this is implemented in a package there is some overhead due to
 <code>.Call</code> vs <code>.Primitive</code>.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;text&quot;</span>, <span class="at">parent =</span> class_character)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>number <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;number&quot;</span>, <span class="at">parent =</span> class_double)</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>Text <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Text&quot;</span>, <span class="at">parent =</span> class_character)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>Number <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Number&quot;</span>, <span class="at">parent =</span> class_double)</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">text</span>(<span class="st">&quot;hi&quot;</span>)</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">number</span>(<span class="dv">1</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Text</span>(<span class="st">&quot;hi&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">Number</span>(<span class="dv">1</span>)</span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>foo_S7 <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;foo_S7&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">method</span>(foo_S7, text) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-foo&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">method</span>(foo_S7, Text) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-foo&quot;</span>)</span>
 <span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
 <span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>foo_S3 <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) {</span>
 <span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="fu">UseMethod</span>(<span class="st">&quot;foo_S3&quot;</span>)</span>
 <span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>}</span>
 <span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>foo_S3.text <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) {</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>foo_S3.Text <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) {</span>
 <span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="fu">paste0</span>(x, <span class="st">&quot;-foo&quot;</span>)</span>
 <span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>}</span>
 <span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a></span>
 <span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="fu">library</span>(methods)</span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="fu">setOldClass</span>(<span class="fu">c</span>(<span class="st">&quot;number&quot;</span>, <span class="st">&quot;numeric&quot;</span>, <span class="st">&quot;S7_object&quot;</span>))</span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="fu">setOldClass</span>(<span class="fu">c</span>(<span class="st">&quot;text&quot;</span>, <span class="st">&quot;character&quot;</span>, <span class="st">&quot;S7_object&quot;</span>))</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="fu">setOldClass</span>(<span class="fu">c</span>(<span class="st">&quot;Number&quot;</span>, <span class="st">&quot;numeric&quot;</span>, <span class="st">&quot;S7_object&quot;</span>))</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="fu">setOldClass</span>(<span class="fu">c</span>(<span class="st">&quot;Text&quot;</span>, <span class="st">&quot;character&quot;</span>, <span class="st">&quot;S7_object&quot;</span>))</span>
 <span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a></span>
 <span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="fu">setGeneric</span>(<span class="st">&quot;foo_S4&quot;</span>, <span class="cf">function</span>(x, ...) <span class="fu">standardGeneric</span>(<span class="st">&quot;foo_S4&quot;</span>))</span>
 <span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt; [1] &quot;foo_S4&quot;</span></span>
-<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="fu">setMethod</span>(<span class="st">&quot;foo_S4&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;text&quot;</span>), <span class="cf">function</span>(x, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-foo&quot;</span>))</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="fu">setMethod</span>(<span class="st">&quot;foo_S4&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;Text&quot;</span>), <span class="cf">function</span>(x, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-foo&quot;</span>))</span>
 <span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a></span>
 <span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co"># Measure performance of single dispatch</span></span>
 <span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(<span class="fu">foo_S7</span>(x), <span class="fu">foo_S3</span>(x), <span class="fu">foo_S4</span>(x))</span>
 <span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 6</span></span>
 <span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co">#&gt;   expression      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a><span class="co">#&gt;   &lt;bch:expr&gt; &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt; 1 foo_S7(x)    4.55µs      5µs   192830.        0B     57.9</span></span>
-<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; 2 foo_S3(x)    1.23µs   1.35µs   661710.        0B     66.2</span></span>
-<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; 3 foo_S4(x)    1.35µs   1.52µs   620031.        0B      0</span></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt; 1 foo_S7(x)    3.69µs   4.14µs   233552.        0B     70.1</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; 2 foo_S3(x)    1.35µs   1.48µs   616660.        0B      0  </span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; 3 foo_S4(x)    1.48µs   1.64µs   586204.        0B     58.6</span></span>
 <span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a></span>
 <span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a>bar_S7 <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;bar_S7&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>))</span>
-<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="fu">method</span>(bar_S7, <span class="fu">list</span>(text, number)) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-&quot;</span>, y, <span class="st">&quot;-bar&quot;</span>)</span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="fu">method</span>(bar_S7, <span class="fu">list</span>(Text, Number)) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-&quot;</span>, y, <span class="st">&quot;-bar&quot;</span>)</span>
 <span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a></span>
 <span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a><span class="fu">setGeneric</span>(<span class="st">&quot;bar_S4&quot;</span>, <span class="cf">function</span>(x, y, ...) <span class="fu">standardGeneric</span>(<span class="st">&quot;bar_S4&quot;</span>))</span>
 <span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co">#&gt; [1] &quot;bar_S4&quot;</span></span>
-<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a><span class="fu">setMethod</span>(<span class="st">&quot;bar_S4&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;text&quot;</span>, <span class="st">&quot;number&quot;</span>), <span class="cf">function</span>(x, y, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-&quot;</span>, y, <span class="st">&quot;-bar&quot;</span>))</span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a><span class="fu">setMethod</span>(<span class="st">&quot;bar_S4&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;Text&quot;</span>, <span class="st">&quot;Number&quot;</span>), <span class="cf">function</span>(x, y, ...) <span class="fu">paste0</span>(x, <span class="st">&quot;-&quot;</span>, y, <span class="st">&quot;-bar&quot;</span>))</span>
 <span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a></span>
 <span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a><span class="co"># Measure performance of double dispatch</span></span>
 <span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">mark</span>(<span class="fu">bar_S7</span>(x, y), <span class="fu">bar_S4</span>(x, y))</span>
 <span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 6</span></span>
 <span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a><span class="co">#&gt;   expression        min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a><span class="co">#&gt;   &lt;bch:expr&gt;   &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co">#&gt; 1 bar_S7(x, y)   7.95µs   8.61µs   111847.        0B     56.0</span></span>
-<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a><span class="co">#&gt; 2 bar_S4(x, y)   3.77µs    4.1µs   235555.        0B     23.6</span></span></code></pre></div>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co">#&gt; 1 bar_S7(x, y)   6.89µs   7.63µs   125512.        0B     50.2</span></span>
+<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a><span class="co">#&gt; 2 bar_S4(x, y)   3.94µs    4.3µs   223593.        0B     44.7</span></span></code></pre></div>
 <p>A potential optimization is caching based on the class names, but
 lookup should be fast without this.</p>
 <p>The following benchmark generates a class hierarchy of different
@@ -417,8 +417,8 @@ the overhead is basically negligible.</p>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">class_nchar =</span> <span class="fu">c</span>(<span class="dv">15</span>, <span class="dv">100</span>),</span>
 <span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  {</span>
 <span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>    <span class="co"># Construct a class hierarchy with that number of classes</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>    text <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;text&quot;</span>, <span class="at">parent =</span> class_character)</span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>    parent <span class="ot">&lt;-</span> text</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>    Text <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Text&quot;</span>, <span class="at">parent =</span> class_character)</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>    parent <span class="ot">&lt;-</span> Text</span>
 <span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>    classes <span class="ot">&lt;-</span> <span class="fu">gen_character</span>(num_classes, <span class="at">min =</span> class_nchar, <span class="at">max =</span> class_nchar)</span>
 <span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>    env <span class="ot">&lt;-</span> <span class="fu">new.env</span>()</span>
 <span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>    <span class="cf">for</span> (x <span class="cf">in</span> classes) {</span>
@@ -449,34 +449,34 @@ the overhead is basically negligible.</p>
 <span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a><span class="co">#&gt; # A tibble: 20 × 8</span></span>
 <span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a><span class="co">#&gt;    expression num_classes class_nchar      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a><span class="co">#&gt;    &lt;bch:expr&gt;       &lt;dbl&gt;       &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   4.55µs      5µs   195762.        0B     58.7</span></span>
-<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15   4.67µs   5.12µs   191035.        0B     76.4</span></span>
-<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   4.55µs      5µs   194971.        0B     58.5</span></span>
-<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15   4.71µs   5.21µs   187491.        0B     75.0</span></span>
-<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   4.63µs   5.12µs   188134.        0B     75.3</span></span>
-<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   4.96µs   5.41µs   180300.        0B     54.1</span></span>
-<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15   4.88µs   5.37µs   181461.        0B     72.6</span></span>
-<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   6.36µs   6.85µs   142644.        0B     42.8</span></span>
-<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   5.25µs   5.74µs   170367.        0B     68.2</span></span>
-<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15   8.12µs   8.69µs   112610.        0B     33.8</span></span>
-<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   4.51µs   5.04µs   192639.        0B     77.1</span></span>
-<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100    4.8µs   5.29µs   182849.        0B     73.2</span></span>
-<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100   4.63µs   5.12µs   188750.        0B     75.5</span></span>
-<span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   4.92µs   5.54µs   176693.        0B     53.0</span></span>
-<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100   4.76µs   5.25µs   184134.        0B     55.3</span></span>
-<span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   5.95µs   6.44µs   151700.        0B     60.7</span></span>
-<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   4.84µs   5.37µs   180968.        0B     72.4</span></span>
-<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  10.95µs  11.44µs    86264.        0B     34.5</span></span>
-<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   5.25µs   5.54µs   178132.        0B     71.3</span></span>
-<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100  16.65µs  17.14µs    57669.        0B     23.1</span></span></code></pre></div>
+<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   3.73µs   4.14µs   233715.        0B     46.8</span></span>
+<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15   3.85µs   4.26µs   226893.        0B     68.1</span></span>
+<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   3.73µs    4.1µs   235608.        0B     70.7</span></span>
+<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15    3.9µs    4.3µs   226792.        0B     68.1</span></span>
+<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   3.73µs   4.14µs   234855.        0B     70.5</span></span>
+<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   4.06µs   4.51µs   215358.        0B     64.6</span></span>
+<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15    4.1µs   4.51µs   215821.        0B     64.8</span></span>
+<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   5.49µs   5.99µs   163775.        0B     49.1</span></span>
+<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   4.51µs   5.12µs   189758.        0B     56.9</span></span>
+<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15   7.42µs      8µs   123380.        0B     37.0</span></span>
+<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   3.77µs   4.18µs   233487.        0B     93.4</span></span>
+<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100   3.98µs   4.55µs   212867.        0B     63.9</span></span>
+<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100    3.9µs   4.55µs   207037.        0B     41.4</span></span>
+<span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   4.43µs   4.96µs   192327.        0B     57.7</span></span>
+<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100   3.73µs   4.22µs   223713.        0B     67.1</span></span>
+<span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   4.84µs   5.33µs   181142.        0B     54.4</span></span>
+<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   4.18µs   4.63µs   207896.        0B     41.6</span></span>
+<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  10.21µs  10.87µs    89545.        0B     26.9</span></span>
+<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   4.47µs   5.04µs   186869.        0B     37.4</span></span>
+<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100  15.46µs  16.32µs    59365.        0B     17.8</span></span></code></pre></div>
 <p>And the same benchmark using double-dispatch</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>bench<span class="sc">::</span><span class="fu">press</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">num_classes =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">50</span>, <span class="dv">100</span>),</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">class_nchar =</span> <span class="fu">c</span>(<span class="dv">15</span>, <span class="dv">100</span>),</span>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  {</span>
 <span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>    <span class="co"># Construct a class hierarchy with that number of classes</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>    text <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;text&quot;</span>, <span class="at">parent =</span> class_character)</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>    parent <span class="ot">&lt;-</span> text</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>    Text <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Text&quot;</span>, <span class="at">parent =</span> class_character)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>    parent <span class="ot">&lt;-</span> Text</span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>    classes <span class="ot">&lt;-</span> <span class="fu">gen_character</span>(num_classes, <span class="at">min =</span> class_nchar, <span class="at">max =</span> class_nchar)</span>
 <span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>    env <span class="ot">&lt;-</span> <span class="fu">new.env</span>()</span>
 <span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>    <span class="cf">for</span> (x <span class="cf">in</span> classes) {</span>
@@ -508,26 +508,26 @@ the overhead is basically negligible.</p>
 <span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co">#&gt; # A tibble: 20 × 8</span></span>
 <span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a><span class="co">#&gt;    expression num_classes class_nchar      min   median `itr/sec` mem_alloc `gc/sec`</span></span>
 <span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a><span class="co">#&gt;    &lt;bch:expr&gt;       &lt;dbl&gt;       &lt;dbl&gt; &lt;bch:tm&gt; &lt;bch:tm&gt;     &lt;dbl&gt; &lt;bch:byt&gt;    &lt;dbl&gt;</span></span>
-<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   5.41µs   5.82µs   165292.        0B     82.7</span></span>
-<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15    5.7µs   6.15µs   157902.        0B     63.2</span></span>
-<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   5.41µs    5.9µs   165632.        0B     66.3</span></span>
-<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15   5.78µs   6.27µs   155876.        0B     62.4</span></span>
-<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   5.54µs   5.99µs   162462.        0B     65.0</span></span>
-<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   6.03µs   6.52µs   150108.        0B     60.1</span></span>
-<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15   6.07µs   6.56µs   148440.        0B     59.4</span></span>
-<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   8.57µs   9.14µs   106982.        0B     53.5</span></span>
-<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   6.81µs    7.3µs   133233.        0B     66.6</span></span>
-<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15  12.14µs  12.75µs    76864.        0B     38.5</span></span>
-<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   5.82µs    6.4µs   150848.        0B     75.5</span></span>
-<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100   6.52µs   7.09µs   137028.        0B     54.8</span></span>
-<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100   5.82µs   6.36µs   152363.        0B     61.0</span></span>
-<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   7.22µs   7.75µs   125326.        0B     50.2</span></span>
-<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100   5.78µs   6.31µs   152658.        0B     61.1</span></span>
-<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   8.65µs   9.31µs   104963.        0B     42.0</span></span>
-<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   6.07µs    6.6µs   146713.        0B     73.4</span></span>
-<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  17.34µs  18.12µs    54393.        0B     27.2</span></span>
-<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   6.89µs   7.22µs   136725.        0B     68.4</span></span>
-<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100  30.01µs  30.59µs    32264.        0B     16.1</span></span></code></pre></div>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co">#&gt;  1 best                 3          15   4.63µs   5.25µs   178156.        0B    71.3 </span></span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a><span class="co">#&gt;  2 worst                3          15   4.84µs   5.62µs   162908.        0B    48.9 </span></span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a><span class="co">#&gt;  3 best                 5          15   4.67µs   5.25µs   178662.        0B    71.5 </span></span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a><span class="co">#&gt;  4 worst                5          15   5.04µs   5.66µs   168251.        0B    50.5 </span></span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a><span class="co">#&gt;  5 best                10          15   4.67µs   5.04µs   190060.        0B    76.1 </span></span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="co">#&gt;  6 worst               10          15   5.25µs   5.66µs   171466.        0B    51.5 </span></span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a><span class="co">#&gt;  7 best                50          15   5.29µs    5.7µs   167396.        0B    67.0 </span></span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">#&gt;  8 worst               50          15   7.71µs   8.32µs   114879.        0B    34.5 </span></span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="co">#&gt;  9 best               100          15   6.07µs   6.68µs   141150.        0B    56.5 </span></span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a><span class="co">#&gt; 10 worst              100          15  11.52µs   12.3µs    78719.        0B    23.6 </span></span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a><span class="co">#&gt; 11 best                 3         100   4.59µs   5.08µs   187697.        0B    75.1 </span></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="co">#&gt; 12 worst                3         100   5.41µs   6.03µs   154788.        0B    46.5 </span></span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a><span class="co">#&gt; 13 best                 5         100   4.88µs   5.37µs   178631.        0B    71.5 </span></span>
+<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a><span class="co">#&gt; 14 worst                5         100   5.54µs   6.03µs   160767.        0B    48.2 </span></span>
+<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a><span class="co">#&gt; 15 best                10         100      5µs   5.66µs   160065.        0B    64.1 </span></span>
+<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a><span class="co">#&gt; 16 worst               10         100   7.58µs   8.04µs   118897.        0B    35.7 </span></span>
+<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a><span class="co">#&gt; 17 best                50         100   5.25µs    5.7µs   169331.        0B    50.8 </span></span>
+<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="co">#&gt; 18 worst               50         100  15.29µs  16.15µs    59015.        0B    23.6 </span></span>
+<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a><span class="co">#&gt; 19 best               100         100   5.95µs   6.44µs   149406.        0B    44.8 </span></span>
+<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a><span class="co">#&gt; 20 worst              100         100  28.99µs  29.97µs    32367.        0B     9.71</span></span></code></pre></div>
 
 
 

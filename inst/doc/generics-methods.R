@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -11,7 +11,7 @@ library(S7)
 mean <- new_generic("mean", "x")
 method(mean, class_numeric) <- function(x) sum(x) / length(x)
 
-## ---- error = TRUE, eval = FALSE----------------------------------------------
+## ----error = TRUE, eval = FALSE-----------------------------------------------
 #  mean(100, na.rm = TRUE)
 
 ## -----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ method(simple_print, class_list) <- function(x, ...) {
   }
 }
 
-## ---- error = TRUE, eval = FALSE----------------------------------------------
+## ----error = TRUE, eval = FALSE-----------------------------------------------
 #  simple_print(list(1, 2, 3), digits = 3)
 #  simple_print(list(1, 2, "x"), digits = 3)
 
@@ -49,7 +49,7 @@ simple_print(list(1, 2, "x"), digits = 3)
 ## -----------------------------------------------------------------------------
 simple_print(list(1, 2, "x"), diggits = 3)
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  length <- new_generic("length", "x", function(x) {
 #    S7_dispatch()
 #  })
@@ -111,23 +111,23 @@ method(mean, date) <- function(x) {
 mean(date(c(1, 10, 100)))
 
 ## -----------------------------------------------------------------------------
-pet <- new_class("pet")
-dog <- new_class("dog", pet)
-cat <- new_class("cat", pet)
+Pet <- new_class("Pet")
+Dog <- new_class("Dog", Pet)
+Cat <- new_class("Cat", Pet)
 
-language <- new_class("language")
-english <- new_class("english", language)
-french <- new_class("french", language)
+Language <- new_class("Language")
+English <- new_class("English", Language)
+French <- new_class("French", Language)
 
 speak <- new_generic("speak", c("x", "y"))
-method(speak, list(dog, english)) <- function(x, y) "Woof"
-method(speak, list(cat, english)) <- function(x, y) "Meow"
-method(speak, list(dog, french)) <- function(x, y) "Ouaf Ouaf"
-method(speak, list(cat, french)) <- function(x, y) "Miaou"
+method(speak, list(Dog, English)) <- function(x, y) "Woof"
+method(speak, list(Cat, English)) <- function(x, y) "Meow"
+method(speak, list(Dog, French)) <- function(x, y) "Ouaf Ouaf"
+method(speak, list(Cat, French)) <- function(x, y) "Miaou"
 
-speak(cat(), english())
-speak(dog(), french())
+speak(Cat(), English())
+speak(Dog(), French())
 
 # This example was originally inspired by blog.klipse.tech/javascript/2021/10/03/multimethod.html
-# which has unfortunately since disappeaed.
+# which has unfortunately since disappeared.
 

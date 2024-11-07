@@ -7,7 +7,11 @@
 #'
 #' By specifying a `getter` and/or `setter`, you can make the property
 #' "dynamic" so that it's computed when accessed or has some non-standard
-#' behaviour when modified.
+#' behaviour when modified. Dynamic properties are not included as an argument
+#' to the default class constructor.
+#'
+#' See the "Properties: Common Patterns" section in `vignette("class-objects")`
+#' for more examples.
 #'
 #' @param class Class that the property must be an instance of.
 #'   See [as_class()] for details.
@@ -31,55 +35,43 @@
 #'   The validator will be called after the `class` has been verified, so
 #'   your code can assume that `value` has known type.
 #' @param default When an object is created and the property is not supplied,
-#'   what should it default to? If `NULL`, defaults to the "empty" instance
-#'   of `class`.
-#' @param name Property name, primarily used for error messages. Used
-#'   primrarily for testing as it is set automatically when using a list of
-#'   properties.
+#'   what should it default to? If `NULL`, it defaults to the "empty" instance
+#'   of `class`. This can also be a quoted call, which then becomes a standard
+#'   function promise in the default constructor, evaluated at the time the
+#'   object is constructed.
+#' @param name Property name, primarily used for error messages. Generally
+#'   don't need to set this here, as it's more convenient to supply as a
+#'   the element name when defining a list of properties. If both `name`
+#'   and a list-name are supplied, the list-name will be used.
 #' @returns An S7 property, i.e. a list with class `S7_property`.
 #' @export
 #' @examples
 #' # Simple properties store data inside an object
-#' pizza <- new_class("pizza", properties = list(
+#' Pizza <- new_class("Pizza", properties = list(
 #'   slices = new_property(class_numeric, default = 10)
 #' ))
-#' my_pizza <- pizza(slices = 6)
+#' my_pizza <- Pizza(slices = 6)
 #' my_pizza@slices
 #' my_pizza@slices <- 5
 #' my_pizza@slices
 #'
-#' your_pizza <- pizza()
+#' your_pizza <- Pizza()
 #' your_pizza@slices
 #'
 #' # Dynamic properties can compute on demand
-#' clock <- new_class("clock", properties = list(
+#' Clock <- new_class("Clock", properties = list(
 #'   now = new_property(getter = function(self) Sys.time())
 #' ))
-#' my_clock <- clock()
+#' my_clock <- Clock()
 #' my_clock@now; Sys.sleep(1)
 #' my_clock@now
-#' # This property is read only
+#' # This property is read only, because there is a 'getter' but not a 'setter'
 #' try(my_clock@now <- 10)
 #'
-#' # These can be useful if you want to deprecate a property
-#' person <- new_class("person", properties = list(
-#'   first_name = class_character,
-#'   firstName = new_property(
-#'      getter = function(self) {
-#'        warning("@firstName is deprecated; please use @first_name instead", call. = FALSE)
-#'        self@first_name
-#'      },
-#'      setter = function(self, value) {
-#'        warning("@firstName is deprecated; please use @first_name instead", call. = FALSE)
-#'        self@first_name <- value
-#'        self
-#'      }
-#'    )
-#' ))
-#' hadley <- person(first_name = "Hadley")
-#' hadley@firstName
-#' hadley@firstName <- "John"
-#' hadley@first_name
+#' # Because the property is dynamic, it is not included as an
+#' # argument to the default constructor
+#' try(Clock(now = 10))
+#' args(Clock)
 new_property <- function(class = class_any,
                          getter = NULL,
                          setter = NULL,
@@ -87,10 +79,7 @@ new_property <- function(class = class_any,
                          default = NULL,
                          name = NULL) {
   class <- as_class(class)
-  if (!is.null(default) && !class_inherits(default, class)) {
-    msg <- sprintf("`default` must be an instance of %s, not a %s", class_desc(class), obj_desc(default))
-    stop(msg)
-  }
+  check_prop_default(default, class)
 
   if (!is.null(getter)) {
     check_function(getter, alist(self = ))
@@ -115,6 +104,43 @@ new_property <- function(class = class_any,
   out
 }
 
+check_prop_default <- function(default, class, error_call = sys.call(-1)) {
+  if (is.null(default)) {
+    return() # always valid.
+  }
+
+  if (is.call(default)) {
+    # A promise default; delay checking until constructor called.
+    return()
+  }
+
+  if (is.symbol(default)) {
+    if (identical(default, quote(...))) {
+      # The meaning of a `...` prop default needs discussion
+      stop(simpleError("`default` cannot be `...`", error_call))
+    }
+    if (identical(default, quote(expr =))) {
+      # The meaning of a missing prop default needs discussion
+      stop(simpleError("`default` cannot be missing", error_call))
+    }
+
+    # other symbols are treated as promises
+    return()
+  }
+
+  if (class_inherits(default, class))
+    return()
+
+  msg <- sprintf("`default` must be an instance of %s, not a %s",
+                 class_desc(class), obj_desc(default))
+
+  stop(simpleError(msg, error_call))
+}
+
+stop.parent <- function(..., call = sys.call(-2)) {
+  stop(simpleError(.makeMessage(...), call))
+}
+
 is_property <- function(x) inherits(x, "S7_property")
 
 #' @export
@@ -129,8 +155,8 @@ str.S7_property <- function(object, ..., nest.lev = 0) {
   print(object, ..., nest.lev = nest.lev)
 }
 
-prop_default <- function(prop) {
-  prop$default %||% class_construct(prop$class)
+prop_default <- function(prop, envir, package) {
+  prop$default %||% class_construct_expr(prop$class, envir, package)
 }
 
 #' Get/set a property
@@ -150,18 +176,23 @@ prop_default <- function(prop) {
 #'    the modified object, invisibly.
 #' @export
 #' @examples
-#' horse <- new_class("horse", properties = list(
+#' Horse <- new_class("Horse", properties = list(
 #'   name = class_character,
 #'   colour = class_character,
 #'   height = class_numeric
 #' ))
-#' lexington <- horse(colour = "bay", height = 15, name = "Lex")
+#' lexington <- Horse(colour = "bay", height = 15, name = "Lex")
 #' lexington@colour
 #' prop(lexington, "colour")
 #'
 #' lexington@height <- 14
 #' prop(lexington, "height") <- 15
 prop <- function(object, name) {
+  .Call(prop_, object, name)
+}
+
+propr <- function(object, name) {
+  # reference implementation of `prop()` implemented in R
   check_is_S7(object)
 
   if (!prop_exists(object, name)) {
@@ -169,6 +200,10 @@ prop <- function(object, name) {
   } else {
     prop_val(object, name)
   }
+}
+
+signal_prop_error_unknown <- function(object, name) {
+  stop(prop_error_unknown(object, name), call. = FALSE)
 }
 
 # Internal helper that assumes the property exists
@@ -193,7 +228,12 @@ prop_obj <- function(object, name) {
 #' @param check If `TRUE`, check that `value` is of the correct type and run
 #'   [validate()] on the object before returning.
 #' @export
-`prop<-` <- local({
+`prop<-` <- function(object, name, check = TRUE, value) {
+  .Call(prop_set_, object, name, check, value)
+}
+
+`propr<-` <- local({
+    # reference implementation of `prop<-()` implemented in R
   # This flag is used to avoid infinite loops if you are assigning a property from a setter function
   setter_property <- NULL
 
@@ -233,38 +273,59 @@ prop_obj <- function(object, name) {
   }
 })
 
+# called from src/prop.c
+signal_prop_error <- function(fmt, object, name) {
+  msg <- sprintf(fmt, obj_desc(object), name)
+  stop(msg, call. = FALSE)
+}
+
+# called from src/prop.c
+signal_error <- function(msg) {
+  stop(msg, call. = FALSE)
+}
+
+
 prop_error_unknown <- function(object, prop_name) {
   sprintf("Can't find property %s@%s", obj_desc(object), prop_name)
 }
 
+
+# called from src/prop.c
 prop_validate <- function(prop, value, object = NULL) {
   if (!class_inherits(value, prop$class)) {
-    sprintf("%s must be %s, not %s",
+    return(sprintf("%s must be %s, not %s",
       prop_label(object, prop$name),
       class_desc(prop$class),
       obj_desc(value)
-    )
-  } else if (!is.null(prop$validator)) {
-    val <- prop$validator(value)
-    if (!is.null(val)) {
-      paste0(prop_label(object, prop$name), " ", val)
-    } else {
-      NULL
-    }
-  } else {
-    NULL
+    ))
   }
+
+  if (is.null(validator <- prop$validator)) {
+    return(NULL)
+  }
+
+  val <- validator(value)
+  if (is.null(val)) {
+    return(NULL)
+  }
+
+  if (is.character(val)) {
+    if (length(val)) {
+      return(paste0(prop_label(object, prop$name), " ", val))
+    } else {
+      return(NULL)
+    }
+  }
+
+  stop(sprintf(
+    "%s validator must return NULL or a character, not <%s>.",
+    prop_label(object, prop$name), typeof(val)
+  ))
 }
 
 prop_label <- function(object, name) {
   sprintf("%s@%s", if (!is.null(object)) obj_desc(object) else "", name)
 }
-
-#' @rdname prop
-#' @usage object@name
-#' @aliases @
-#' @rawNamespace if (getRversion() >= "4.3.0") S3method(base::`@`, S7_object) else export("@")
-`@.S7_object` <- prop
 
 # Note: we need to explicitly refer to base with "base::`@`" in the
 # namespace directive to ensure the method is registered in the correct place.
@@ -272,24 +333,13 @@ prop_label <- function(object, name) {
 # presence of a closure w/ the name of the generic (`@`) in the R7 namespace,
 # and incorrectly assumes that R7::`@` is the generic and registers the
 # method in the package namespace instead of base::.__S3MethodsTable__.
-
-`@` <- function(object, name) {
-  if (inherits(object, "S7_object")) {
-    name <- as.character(substitute(name))
-    prop(object, name)
-  } else {
-    name <- substitute(name)
-    do.call(base::`@`, list(object, name))
-  }
-}
+#' @usage object@name
+#' @rawNamespace if (getRversion() >= "4.3.0") S3method(base::`@`, S7_object)
+#' @name prop
+`@.S7_object` <- prop
 
 #' @rawNamespace S3method("@<-",S7_object)
-`@<-.S7_object` <- function(object, name, value) {
-  nme <- as.character(substitute(name))
-  prop(object, nme) <- value
-
-  invisible(object)
-}
+`@<-.S7_object` <- `prop<-`
 
 
 #' Property introspection
@@ -302,8 +352,8 @@ prop_label <- function(object, name) {
 #'   a single `TRUE` or `FALSE`.
 #' @export
 #' @examples
-#' foo <- new_class("foo", properties = list(a = class_character, b = class_integer))
-#' f <- foo()
+#' Foo <- new_class("Foo", properties = list(a = class_character, b = class_integer))
+#' f <- Foo()
 #'
 #' prop_names(f)
 #' prop_exists(f, "a")
@@ -349,26 +399,27 @@ prop_exists <- function(object, name) {
 #'
 #' @importFrom stats setNames
 #' @inheritParams prop
+#' @param names A character vector of property names to retrieve. Default is all
+#'   properties.
 #' @returns A named list of property values.
 #' @export
 #' @examples
-#' horse <- new_class("horse", properties = list(
+#' Horse <- new_class("Horse", properties = list(
 #'   name = class_character,
 #'   colour = class_character,
 #'   height = class_numeric
 #' ))
-#' lexington <- horse(colour = "bay", height = 15, name = "Lex")
+#' lexington <- Horse(colour = "bay", height = 15, name = "Lex")
 #'
 #' props(lexington)
 #' props(lexington) <- list(height = 14, name = "Lexington")
 #' lexington
-props <- function(object) {
+props <- function(object, names = prop_names(object)) {
   check_is_S7(object)
-  prop_names <- prop_names(object)
-  if (length(prop_names) == 0) {
-    list()
+  if (length(names) == 0) {
+    structure(list(), names = character(0))
   } else {
-    setNames(lapply(prop_names, prop, object = object), prop_names)
+    setNames(lapply(names, prop, object = object), names)
   }
 }
 #' @rdname props
@@ -405,7 +456,7 @@ as_properties <- function(x) {
   }
 
   out <- Map(as_property, x, names2(x), seq_along(x))
-  names(out) <- names2(x)
+  names(out) <- vapply(out, function(x) x$name, FUN.VALUE = character(1))
 
   if (anyDuplicated(names(out))) {
     stop("`properties` names must be unique", call. = FALSE)
@@ -415,16 +466,33 @@ as_properties <- function(x) {
 }
 
 as_property <- function(x, name, i) {
-  if (name == "") {
-    msg <- sprintf("`property[[%i]]` is missing a name", i)
-    stop(msg, call. = FALSE)
-  }
 
   if (is_property(x)) {
-    x$name <- name
+    if (name == "") {
+      if (is.null(x$name)) {
+        msg <- sprintf("`properties[[%i]]` must have a name or be named.", i)
+        stop(msg, call. = FALSE)
+      }
+    } else {
+      x$name <- name
+    }
     x
   } else {
+    if (name == "") {
+      msg <- sprintf("`properties[[%i]]` must be named.", i)
+      stop(msg, call. = FALSE)
+    }
+
     class <- as_class(x, arg = paste0("property$", name))
     new_property(x, name = name)
   }
 }
+
+prop_is_read_only <- function(prop) {
+  is.function(prop$getter) && !is.function(prop$setter)
+}
+
+prop_has_setter <- function(prop) is.function(prop$setter)
+
+prop_is_dynamic <- function(prop) is.function(prop$getter)
+

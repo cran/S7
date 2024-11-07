@@ -1,5 +1,5 @@
 describe("method introspection", {
-  test_that("can dispatch by class or object", {
+  it("can dispatch by class or object", {
     foo <- new_generic("foo", "x")
     method(foo, class_character) <- function(x) "c"
 
@@ -23,20 +23,24 @@ describe("method introspection", {
     })
   })
 
-  test_that("errors if no method found", {
+  it("errors if no method found", {
     foo <- new_generic("foo", "x")
+    foo2 <- new_generic("foo", c("x", "y"))
 
     expect_snapshot(error = TRUE, {
-      method(foo, list())
-      method(foo, list("blah"))
+      method(foo, class = class_integer)
+      method(foo, object = 1L)
+
+      method(foo2, class = list(class_integer, class_double))
+      method(foo2, object = list(1L, 2))
     })
   })
 })
 
 describe("method explanation", {
   it("shows all possible methods along with matches", {
-    foo1 <- new_class("foo1")
-    foo2 <- new_class("foo2", foo1)
+    foo1 <- new_class("foo1", package = NULL)
+    foo2 <- new_class("foo2", foo1, package = NULL)
 
     add <- new_generic("add", c("x", "y"))
     method(add, list(foo2, foo1)) <- function(x, y) c(2, 1)

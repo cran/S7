@@ -12,6 +12,7 @@
 #'   * A base class, like [class_logical], [class_integer], or [class_double].
 #'   * A "special", either [class_missing] or [class_any].
 #' @param arg Argument name used when generating errors.
+#' @keywords internal
 #' @export
 #' @return A standardised class: either `NULL`, an S7 class, an S7 union,
 #'   as [new_S3_class], or a S4 class.
@@ -79,20 +80,96 @@ class_friendly <- function(x) {
   )
 }
 
-class_constructor <- function(.x, ...) {
-  switch(class_type(.x),
-    NULL = function() NULL,
-    any = function() NULL,
-    S4 = function(...) methods::new(.x, ...),
-    S7 = .x,
-    S7_base = .x$constructor,
-    S7_union = class_constructor(.x$classes[[1]]),
-    S7_S3 = .x$constructor,
-    stop(sprintf("Can't construct %s", class_friendly(.x)), call. = FALSE)
-  )
-}
 class_construct <- function(.x, ...) {
   class_constructor(.x)(...)
+}
+
+
+class_construct_expr <- function(.x, envir = NULL, package = NULL) {
+  f <- class_constructor(.x)
+
+  # For S7 class constructors with a non-NULL @package property
+  # Instead of inlining the full class definition, use either
+  # `pkgname::classname()` or `classname()`
+  if (is_class(f) && !is.null(f@package)) {
+    # Check if the class can be resolved as a bare symbol without pkgname::
+    # Note: During package build, using pkg::class for a package's own symbols
+    # will raise an error from `::`.
+    if (identical(package, f@package)) {
+      return(call(f@name))
+    } else {
+      # namespace the pkgname::classname() call
+      cl <- as.call(list(quote(`::`), as.name(f@package), as.name(f@name)))
+
+      # check the call evaluates to f.
+      # This will error if package is not installed or object is not exported.
+      f2 <- eval(cl, baseenv())
+      if (!identical(f, f2)) {
+        msg <- sprintf(
+          "`%s::%s` is not identical to the class with the same @package and @name properties",
+          f@package, f@name
+        )
+        stop(msg, call. = FALSE)
+      }
+      return(as.call(list(cl)))
+    }
+  }
+
+  # If the constructor is a closure wrapping a simple expression, try
+  # to extract the expression
+  # (mostly for nicer printing and introspection.)
+
+  # can't unwrap if the closure is potentially important
+  # (this can probably be relaxed to allow additional environments)
+  fe <- environment(f)
+  if (!identical(fe, baseenv())) {
+    return(as.call(list(f)))
+  }
+
+  # special case for `class_missing`
+  if (identical(body(f) -> fb, quote(expr =))) {
+    return(quote(expr =))
+  }
+
+  # `new_object()` must be called from the class constructor, can't
+  # be safely unwrapped
+  if ("new_object" %in% all.names(fb)) {
+    return(as.call(list(f)))
+  }
+
+  # maybe unwrap body if it is a single expression wrapped in `{`
+  if (length(fb) == 2L && identical(fb[[1L]], quote(`{`)))
+    fb <- fb[[2L]]
+
+  # If all the all the work happens in the promise to the `.data` arg,
+  # return the `.data` expression.
+  ff <- formals(f)
+  if ((identical(fb, quote(.data))) &&
+      identical(names(ff), ".data")) {
+    return(ff$.data)
+  }
+
+  # if all the work happens in the function body, return the body.
+  if (is.null(ff)) {
+    return(fb)
+  }
+
+  #else, return a call to the constructor
+  as.call(list(f))
+}
+
+class_constructor <- function(.x) {
+  switch(class_type(.x),
+         any = ,
+         NULL = new_function(env = baseenv()),
+         missing = new_function(, quote(expr =), baseenv()),
+         S4 = function(...) methods::new(.x, ...),
+         S7 = .x,
+         S7_base = .x$constructor,
+         S7_union = class_constructor(.x$classes[[1]]),
+         S7_S3 = .x$constructor,
+         stop(sprintf("Can't construct %s", class_friendly(.x)), call. = FALSE)
+  )
 }
 
 class_validate <- function(class, object) {
@@ -227,6 +304,7 @@ base_class <- function(x) {
     special = "function",
     builtin = "function",
     language = "call",
+    symbol = "name",
     typeof(x)
   )
 }

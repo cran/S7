@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -8,7 +8,7 @@ knitr::opts_chunk$set(
 library(S7)
 
 ## -----------------------------------------------------------------------------
-range <- new_class("range",
+Range <- new_class("Range",
   properties = list(
     start = class_double,
     end = class_double
@@ -28,15 +28,15 @@ range <- new_class("range",
   }
 )
 
-## ---- error = TRUE------------------------------------------------------------
-x <- range(1, 2:3)
-x <- range(10, 1)
+## ----error = TRUE-------------------------------------------------------------
+x <- Range(1, 2:3)
+x <- Range(10, 1)
 
-x <- range(1, 10)
+x <- Range(1, 10)
 x@start <- 20
 
-## ---- error = TRUE------------------------------------------------------------
-x <- range(1, 2)
+## ----error = TRUE-------------------------------------------------------------
+x <- Range(1, 2)
 attr(x, "start") <- 3
 validate(x)
 
@@ -46,10 +46,10 @@ shift <- function(x, shift) {
   x@end <- x@end + shift
   x
 }
-shift(range(1, 10), 1)
+shift(Range(1, 10), 1)
 
-## ---- error = TRUE------------------------------------------------------------
-shift(range(1, 10), 10)
+## ----error = TRUE-------------------------------------------------------------
+shift(Range(1, 10), 10)
 
 ## -----------------------------------------------------------------------------
 shift <- function(x, shift) {
@@ -59,37 +59,80 @@ shift <- function(x, shift) {
   )
   x
 }
-shift(range(1, 10), 10)
+shift(Range(1, 10), 10)
 
 ## -----------------------------------------------------------------------------
-range <- new_class("range",
+Range <- new_class("Range",
   properties = list(
     start = new_property(class_double),
     end = new_property(class_double)
   )
 )
 
+## ----error = TRUE-------------------------------------------------------------
+prop_number <- new_property(
+  class = class_double,
+  validator = function(value) {
+    if (length(value) != 1L) "must be length 1"
+  }
+)
+
+Range <- new_class("Range",
+  properties = list(
+    start = prop_number,
+    end = prop_number
+  ),
+  validator = function(self) {
+    if (self@end < self@start) {
+      sprintf(
+        "@end (%i) must be greater than or equal to @start (%i)",
+        self@end,
+        self@start
+      )
+    }
+  }
+)
+
+Range(start = c(1.5, 3.5))
+Range(end = c(1.5, 3.5))
+
 ## -----------------------------------------------------------------------------
-empty <- new_class("empty",
+Empty <- new_class("Empty",
   properties = list(
     x = class_double,
     y = class_character,
     z = class_logical
   ))
-empty()
+Empty()
 
 ## -----------------------------------------------------------------------------
-empty <- new_class("empty",
+Empty <- new_class("Empty",
   properties = list(
     x = new_property(class_numeric, default = 0),
     y = new_property(class_character, default = ""),
     z = new_property(class_logical, default = NA)
   )
 )
-empty()
+Empty()
 
 ## -----------------------------------------------------------------------------
-range <- new_class("range",
+Stopwatch <- new_class("Stopwatch", properties = list(
+  start_time = new_property(
+    class = class_POSIXct,
+    default = quote(Sys.time())
+  ),
+  elapsed = new_property(
+    getter = function(self) {
+      difftime(Sys.time(), self@start_time, units = "secs")
+    }
+  )
+))
+args(Stopwatch)
+round(Stopwatch()@elapsed)
+round(Stopwatch(Sys.time() - 1)@elapsed)
+
+## -----------------------------------------------------------------------------
+Range <- new_class("Range",
   properties = list(
     start = class_double,
     end = class_double,
@@ -99,14 +142,14 @@ range <- new_class("range",
   )
 )
 
-x <- range(start = 1, end = 10)
+x <- Range(start = 1, end = 10)
 x
 
-## ---- error = TRUE------------------------------------------------------------
+## ----error = TRUE-------------------------------------------------------------
 x@length <- 20
 
 ## -----------------------------------------------------------------------------
-range <- new_class("range",
+Range <- new_class("Range",
   properties = list(
     start = class_double,
     end = class_double,
@@ -121,23 +164,103 @@ range <- new_class("range",
   )
 )
 
-x <- range(start = 1, end = 10)
+x <- Range(start = 1, end = 10)
 x
 
 x@length <- 5
 x
 
 ## -----------------------------------------------------------------------------
-range@constructor
+Person <- new_class("Person", properties = list(
+ first_name = class_character,
+ firstName = new_property(
+    class_character,
+    default = quote(first_name),
+    getter = function(self) {
+      warning("@firstName is deprecated; please use @first_name instead", call. = FALSE)
+      self@first_name
+    },
+    setter = function(self, value) {
+      if (identical(value, self@first_name)) {
+        return(self)
+      }
+      warning("@firstName is deprecated; please use @first_name instead", call. = FALSE)
+      self@first_name <- value
+      self
+    }
+  )
+))
+
+args(Person)
+
+hadley <- Person(firstName = "Hadley")
+
+hadley <- Person(first_name = "Hadley") # no warning
+
+hadley@firstName
+
+hadley@firstName <- "John"
+
+hadley@first_name  # no warning
 
 ## -----------------------------------------------------------------------------
-range <- new_class("range",
+Person <- new_class("Person", properties = list(
+ name = new_property(
+   class_character,
+   validator = function(value) {
+     if (length(value) != 1 || is.na(value) || value == "")
+       "must be a non-empty string"
+   }
+ )
+))
+
+try(Person())
+
+try(Person(1)) # class_character$validator() is also checked.
+
+Person("Alice")
+
+## -----------------------------------------------------------------------------
+Person <- new_class("Person", properties = list(
+ name = new_property(
+   class_character,
+   default = quote(stop("@name is required")))
+))
+
+try(Person())
+
+Person("Alice")
+
+## -----------------------------------------------------------------------------
+Person <- new_class("Person", properties = list(
+ birth_date = new_property(
+   class_Date,
+   setter = function(self, value) {
+     if(!is.null(self@birth_date)) {
+       stop("@birth_date is read-only", call. = FALSE)
+     }
+     self@birth_date <- as.Date(value)
+     self
+   }
+)))
+
+person <- Person("1999-12-31")
+
+try(person@birth_date <- "2000-01-01")
+
+## -----------------------------------------------------------------------------
+Range@constructor
+
+## -----------------------------------------------------------------------------
+Range <- new_class("Range",
   properties = list(
     start = class_numeric,
     end = class_numeric
   ),
   constructor = function(x) {
-    new_object(S7_object(), start = min(x, na.rm = TRUE), end = max(x, na.rm = TRUE))
+    new_object(S7_object(), 
+               start = min(x, na.rm = TRUE), 
+               end = max(x, na.rm = TRUE))
   }
 )
 

@@ -6,7 +6,7 @@
 \alias{set_props}
 \title{Get/set multiple properties}
 \usage{
-props(object)
+props(object, names = prop_names(object))
 
 props(object) <- value
 
@@ -14,6 +14,9 @@ set_props(object, ...)
 }
 \arguments{
 \item{object}{An object from a S7 class}
+
+\item{names}{A character vector of property names to retrieve. Default is all
+properties.}
 
 \item{value}{A named list of values. The object is checked for validity
 only after all replacements are performed.}
@@ -33,12 +36,12 @@ object with new values for the specified properties.
 }
 }
 \examples{
-horse <- new_class("horse", properties = list(
+Horse <- new_class("Horse", properties = list(
   name = class_character,
   colour = class_character,
   height = class_numeric
 ))
-lexington <- horse(colour = "bay", height = 15, name = "Lex")
+lexington <- Horse(colour = "bay", height = 15, name = "Lex")
 
 props(lexington)
 props(lexington) <- list(height = 14, name = "Lexington")

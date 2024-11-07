@@ -73,7 +73,7 @@ describe("method registration", {
 
   it("can register S7 method for S4 generic", {
     methods::setGeneric("bar", function(x) standardGeneric("bar"))
-    S4foo <- new_class("S4foo")
+    S4foo <- new_class("S4foo", package = NULL)
 
     expect_snapshot_error(method(bar, S4foo) <- function(x) "foo")
 
@@ -122,6 +122,16 @@ describe("as_signature()", {
       as_signature(class_character, foo)
       as_signature(list(class_character), foo)
     })
+  })
+
+  it("works with NULL", {
+    foo <- new_generic("foo", c("x"))
+    sig <- as_signature(NULL, foo)
+    expect_length(sig, 1)
+
+    foo <- new_generic("foo", c("x", "y", "z"))
+    sig <- as_signature(list(NULL, NULL, class_integer), foo)
+    expect_length(sig, 3)
   })
 })
 

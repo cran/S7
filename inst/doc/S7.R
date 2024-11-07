@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -8,21 +8,21 @@ knitr::opts_chunk$set(
 library(S7)
 
 ## -----------------------------------------------------------------------------
-dog <- new_class("dog", properties = list(
+Dog <- new_class("Dog", properties = list(
   name = class_character,
   age = class_numeric
 ))
-dog
+Dog
 
 ## -----------------------------------------------------------------------------
-lola <- dog(name = "Lola", age = 11)
+lola <- Dog(name = "Lola", age = 11)
 lola
 
 ## -----------------------------------------------------------------------------
 lola@age <- 12
 lola@age
 
-## ---- error = TRUE------------------------------------------------------------
+## ----error = TRUE-------------------------------------------------------------
 lola@age <- "twelve"
 
 ## -----------------------------------------------------------------------------
@@ -35,7 +35,7 @@ class(lola)
 speak <- new_generic("speak", "x")
 
 ## -----------------------------------------------------------------------------
-method(speak, dog) <- function(x) {
+method(speak, Dog) <- function(x) {
   "Woof"
 }
 
@@ -43,22 +43,22 @@ method(speak, dog) <- function(x) {
 speak(lola)
 
 ## -----------------------------------------------------------------------------
-cat <- new_class("cat", properties = list(
+Cat <- new_class("Cat", properties = list(
   name = class_character,
   age = class_double
 ))
-method(speak, cat) <- function(x) {
+method(speak, Cat) <- function(x) {
   "Meow"
 }
 
-fluffy <- cat(name = "Fluffy", age = 5)
+fluffy <- Cat(name = "Fluffy", age = 5)
 speak(fluffy)
 
-## ---- error = TRUE------------------------------------------------------------
+## ----error = TRUE-------------------------------------------------------------
 speak(1)
 
 ## -----------------------------------------------------------------------------
-pet <- new_class("pet",
+Pet <- new_class("Pet",
   properties = list(
     name = class_character,
     age = class_numeric
@@ -66,25 +66,25 @@ pet <- new_class("pet",
 )
 
 ## -----------------------------------------------------------------------------
-cat <- new_class("cat", parent = pet)
-dog <- new_class("dog", parent = pet)
+Cat <- new_class("Cat", parent = Pet)
+Dog <- new_class("Dog", parent = Pet)
 
-cat
-dog
+Cat
+Dog
 
 ## -----------------------------------------------------------------------------
-lola <- dog(name = "Lola", age = 11)
-fluffy <- cat(name = "Fluffy", age = 5)
+lola <- Dog(name = "Lola", age = 11)
+fluffy <- Cat(name = "Fluffy", age = 5)
 
 ## -----------------------------------------------------------------------------
 describe <- new_generic("describe", "x")
-method(describe, pet) <- function(x) {
+method(describe, Pet) <- function(x) {
   paste0(x@name, " is ", x@age, " years old")
 }
 describe(lola)
 describe(fluffy)
 
-method(describe, dog) <- function(x) {
+method(describe, Dog) <- function(x) {
   paste0(x@name, " is a ", x@age, " year old dog")
 }
 describe(lola)
@@ -95,17 +95,17 @@ method(describe, S7_object) <- function(x) {
   "An S7 object"
 }
 
-cocktail <- new_class("cocktail",
+Cocktail <- new_class("Cocktail",
   properties = list(
     ingredients = class_character
   )
 )
-martini <- cocktail(ingredients = c("gin", "vermouth"))
+martini <- Cocktail(ingredients = c("gin", "vermouth"))
 describe(martini)
 
 ## -----------------------------------------------------------------------------
 describe
 
 ## -----------------------------------------------------------------------------
-method(describe, pet)
+method(describe, Pet)
 

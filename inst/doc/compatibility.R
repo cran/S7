@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -8,14 +8,14 @@ knitr::opts_chunk$set(
 library(S7)
 
 ## -----------------------------------------------------------------------------
-foo <- new_class("foo")
-class(foo())
+Foo <- new_class("Foo")
+class(Foo())
 
-mean.foo <- function(x, ...) {
+mean.Foo <- function(x, ...) {
   "mean of foo"
 }
 
-mean(foo())
+mean(Foo())
 
 ## -----------------------------------------------------------------------------
 rle <- function(x) {
@@ -51,21 +51,21 @@ new_rle <- new_class("rle",
 rle(1:10)
 
 ## -----------------------------------------------------------------------------
-new_rle <- new_class("rle", properties = list(
+rle <- new_class("rle", properties = list(
   lengths = class_integer,
   values = class_atomic
 ))
 
 ## -----------------------------------------------------------------------------
-method(`$`, new_rle) <- prop
+method(`$`, rle) <- prop
 rle(1:10)
 
 ## -----------------------------------------------------------------------------
-class1 <- new_class("class1")
-class2 <- new_class("class2")
-union1 <- new_union(class1, class2)
+Class1 <- new_class("Class1")
+Class2 <- new_class("Class2")
+Union1 <- new_union(Class1, Class2)
 
 foo <- new_generic("foo", "x")
-method(foo, union1) <- function(x) ""
+method(foo, Union1) <- function(x) ""
 foo
 

@@ -13,7 +13,8 @@ name.}
 
 \item{constructor}{An optional constructor that can be used to create
 objects of the specified class. This is only needed if you wish to
-have an S7 class inherit from an S3 class. It must be specified in the
+have an S7 class inherit from an S3 class or to use the S3 class as a
+property without a default. It must be specified in the
 same way as a S7 constructor: the first argument should be \code{.data}
 (the base type whose attributes will be modified).
 
@@ -35,6 +36,7 @@ An S7 definition of an S3 class, i.e. a list with class
 \description{
 To use an S3 class with S7, you must explicitly declare it using
 \code{new_S3_class()} because S3 lacks a formal class definition.
+(Unless it's an important base class already defined in \link{base_s3_classes}.)
 }
 \section{Method dispatch, properties, and unions}{
 There are three ways of using S3 with S7 that only require the S3 class
@@ -49,7 +51,7 @@ This is easy, and you can usually include the \code{new_S3_class()}
 call inline:
 
 \if{html}{\out{<div class="sourceCode R">}}\preformatted{method(my_generic, new_S3_class("factor")) <- function(x) "A factor"
-new_class("my_class", properties = list(types = new_S3_class("factor")))
+new_class("MyClass", properties = list(types = new_S3_class("factor")))
 new_union("character", new_S3_class("factor"))
 }\if{html}{\out{</div>}}
 }

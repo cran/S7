@@ -10,6 +10,7 @@
 #' S7_object
 S7_object <- new_class(
   name = "S7_object",
+  package = NULL,
   parent = NULL,
   constructor = function() {
     .Call(S7_object_)
@@ -81,32 +82,45 @@ is_S7_type <- function(x) {
 }
 
 check_subsettable <- function(x, allow_env = FALSE) {
-  allowed_types <- c("list", if (allow_env) "environment")
+  allowed_types <- c("list", "language", "pairlist", if (allow_env) "environment")
   if (!typeof(x) %in% allowed_types) {
-    stop("S7 objects are not subsettable.", call. = FALSE)
+    stop("S7 objects are not subsettable.")
   }
   invisible(TRUE)
 }
 
-S7_generic <- new_class(
-  name = "S7_generic",
-  properties = list(
-    name = class_character,
-    methods = class_environment,
-    dispatch_args = class_character
-  ),
-  parent = class_function
-)
-methods::setOldClass(c("S7_generic", "function", "S7_object"))
-is_generic <- function(x) inherits(x, "S7_generic")
+S7_generic <- NULL
 
-S7_method <- new_class("S7_method",
-  parent = class_function,
-  properties = list(
-    generic = S7_generic,
-    signature = class_list
+on_load_define_S7_generic <- function() {
+  # we do this in .onLoad() because dynlib `prop_` symbol
+  # is not available at pkg build time, and new_class()
+  # errors if `@` is not usable.
+  S7_generic <<- new_class(
+    name = "S7_generic",
+    package = NULL,
+    properties = list(
+      name = class_character,
+      methods = class_environment,
+      dispatch_args = class_character
+    ),
+    parent = class_function
   )
-)
+}
+
+methods::setOldClass(c("S7_generic", "function", "S7_object"))
+is_S7_generic <- function(x) inherits(x, "S7_generic")
+
+
+S7_method <- NULL
+
+on_load_define_S7_method <- function() {
+  S7_method <<- new_class(
+    "S7_method",
+    package = NULL,
+    parent = class_function,
+    properties = list(generic = S7_generic, signature = class_list)
+  )
+}
 methods::setOldClass(c("S7_method", "function", "S7_object"))
 
 # hooks -------------------------------------------------------------------
@@ -119,8 +133,11 @@ methods::setOldClass(c("S7_method", "function", "S7_object"))
 }
 
 .onLoad <- function(...) {
+  activate_backward_compatiblility()
+
+  on_load_define_S7_generic()
+  on_load_define_S7_method()
   on_load_make_convert_generic()
-  on_load_define_matrixOps()
   on_load_define_ops()
   on_load_define_or_methods()
   on_load_define_S7_type()

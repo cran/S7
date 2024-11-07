@@ -84,11 +84,21 @@ validate <- function(object, recursive = TRUE, properties = TRUE) {
 
   # Next, recursively validate the object
   errors <- character()
-  repeat({
-    errors <- c(errors, class_validate(class, object))
+  repeat {
+    error <- class_validate(class, object)
+    if (is.null(error)) {
+
+    } else if (is.character(error)) {
+      append(errors) <- error
+    } else {
+      stop(sprintf(
+        "%s validator must return NULL or a character, not <%s>.",
+        obj_desc(class), typeof(error)
+      ))
+    }
     if (!is_class(class) || !recursive) break
     class <- class@parent
-  })
+  }
 
   # If needed, report errors
   if (length(errors) > 0) {
@@ -103,14 +113,14 @@ validate <- function(object, recursive = TRUE, properties = TRUE) {
 validate_properties <- function(object, class) {
   errors <- character()
 
-  for (prop in class@properties) {
+  for (prop_obj in class@properties) {
     # Don't validate dynamic properties
-    if (!is.null(prop$getter)) {
+    if (!is.null(prop_obj$getter)) {
       next
     }
 
-    value <- prop(object, prop$name)
-    errors <- c(errors, prop_validate(prop, value))
+    value <- prop(object, prop_obj$name)
+    errors <- c(errors, prop_validate(prop_obj, value))
   }
 
   errors

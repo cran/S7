@@ -24,10 +24,10 @@
 #'   `S7_external_generic`.
 #' @export
 #' @examples
-#' my_class <- new_class("my_class")
+#' MyClass <- new_class("MyClass")
 #'
 #' your_generic <- new_external_generic("stats", "median", "x")
-#' method(your_generic, my_class) <- function(x) "Hi!"
+#' method(your_generic, MyClass) <- function(x) "Hi!"
 new_external_generic <- function(package, name, dispatch_args, version = NULL) {
   out <- list(
     package = package,
@@ -38,6 +38,20 @@ new_external_generic <- function(package, name, dispatch_args, version = NULL) {
 
   class(out) <- "S7_external_generic"
   out
+}
+
+as_external_generic <- function(x) {
+  if (is_S7_generic(x)) {
+    pkg <- package_name(x)
+    new_external_generic(pkg, x@name, x@dispatch_args)
+  } else if (is_external_generic(x)) {
+    x
+  } else if (is_S3_generic(x)) {
+    pkg <- package_name(x$generic)
+    new_external_generic(pkg, x$name, "__S3__")
+  } else if (is_S4_generic(x)) {
+    new_external_generic(x@package, as.vector(x@generic), x@signature)
+  }
 }
 
 #' @export
@@ -74,10 +88,13 @@ is_external_generic <- function(x) {
 #' }
 methods_register <- function() {
   package <- packageName(parent.frame())
+  ns <- topenv(parent.frame())
+  # TODO?: check/enforce that methods_register() is being called from .onLoad()
+
   tbl <- S7_methods_table(package)
 
   for (x in tbl) {
-    register <- registrar(x$generic, x$signature, x$method)
+    register <- registrar(x$generic, x$signature, x$method, ns)
 
     if (isNamespaceLoaded(x$generic$package)) {
       register()
@@ -89,9 +106,9 @@ methods_register <- function() {
   invisible()
 }
 
-registrar <- function(generic, signature, method) {
+registrar <- function(generic, signature, method, env) {
   # Force all arguments
-  list(generic, signature, method)
+  generic; signature; method; env;
 
   function(...) {
     ns <- asNamespace(generic$package)
@@ -101,7 +118,7 @@ registrar <- function(generic, signature, method) {
         warning(msg, call. = FALSE)
       } else {
         generic_fun <- get(generic$name, envir = ns, inherits = FALSE)
-        register_method(generic_fun, signature, method, package = NULL)
+        register_method(generic_fun, signature, method, env, package = NULL)
       }
     }
   }
@@ -115,12 +132,11 @@ external_methods_reset <- function(package) {
 external_methods_add <- function(package, generic, signature, method) {
   tbl <- S7_methods_table(package)
 
-  methods <- append(
-    tbl,
-    list(list(generic = generic, signature = signature, method = method))
-  )
+  append1(tbl) <- list(generic = generic,
+                       signature = signature,
+                       method = method)
 
-  S7_methods_table(package) <- methods
+  S7_methods_table(package) <- tbl
   invisible()
 }
 
@@ -130,7 +146,7 @@ external_methods_add <- function(package, generic, signature, method) {
 S7_methods_table <- function(package) {
   ns <- asNamespace(package)
   tbl <- ns[[".__S3MethodsTable__."]]
-  attr(tbl, "S7methods")
+  attr(tbl, "S7methods") %||% list()
 }
 `S7_methods_table<-` <- function(package, value) {
   ns <- asNamespace(package)

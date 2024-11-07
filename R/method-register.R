@@ -1,4 +1,4 @@
-#' Register a S7 method for a generic
+#' Register an S7 method for a generic
 #'
 #' @description
 #' A generic defines the interface of a function. Once you have created a
@@ -67,44 +67,32 @@ register_method <- function(generic,
   generic <- as_generic(generic)
   signature <- as_signature(signature, generic)
 
+
+  if (is_external_generic(generic) && isNamespaceLoaded(generic$package)) {
+    generic <- as_generic(getFromNamespace(generic$name, generic$package))
+  }
+
   # Register in current session
-  if (is_generic(generic)) {
+  if (is_S7_generic(generic)) {
     check_method(method, generic, name = method_name(generic, signature))
     register_S7_method(generic, signature, method)
-  } else if (is_external_generic(generic)) {
-    # Only register immediately if soft dependency is available
-    if (requireNamespace(generic$package, quietly = TRUE)) {
-      gen <- getFromNamespace(generic$name, asNamespace(generic$package))
-      register_method(gen, signature, method, package = NULL)
-    }
   } else if (is_S3_generic(generic)) {
-    register_S3_method(generic, signature, method)
-  } else if (inherits(generic, "genericFunction")) {
+    register_S3_method(generic, signature, method, env)
+  } else if (is_S4_generic(generic)) {
     register_S4_method(generic, signature, method, env)
   }
 
   # if we're inside a package, we also need to be able register methods
   # when the package is loaded
   if (!is.null(package) && !is_local_generic(generic, package)) {
-    if (is_generic(generic)) {
-      pkg <- package_name(generic)
-      generic <- new_external_generic(pkg, generic@name, generic@dispatch_args)
-    } else if (is_external_generic(generic)) {
-      # already in correct form
-    } else if (is_S3_generic(generic)) {
-      pkg <- package_name(generic)
-      generic <- new_external_generic(pkg, generic$name, NULL)
-    } else if (is_S4_generic(generic)) {
-      generic <- new_external_generic(generic@package, generic@generic, NULL)
-    }
-
+    generic <- as_external_generic(generic)
     external_methods_add(package, generic, signature, method)
   }
 
-  invisible()
+  invisible(generic)
 }
 
-register_S3_method <- function(generic, signature, method) {
+register_S3_method <- function(generic, signature, method, envir = parent.frame()) {
   if (class_type(signature[[1]]) != "S7") {
     msg <- sprintf(
       "When registering methods for S3 generic %s(), signature must be an S7 class, not %s.",
@@ -113,8 +101,13 @@ register_S3_method <- function(generic, signature, method) {
     )
     stop(msg, call. = FALSE)
   }
+
+  if (is_external_generic(external_generic <- get0(generic$name, envir = envir))) {
+    envir <- asNamespace(external_generic$package)
+  }
+
   class <- S7_class_name(signature[[1]])
-  registerS3method(generic$name, class, method, envir = parent.frame())
+  registerS3method(generic$name, class, method, envir)
 }
 
 register_S7_method <- function(generic, signature, method) {
@@ -156,7 +149,7 @@ as_signature <- function(signature, generic) {
   } else {
     check_signature_list(signature, n)
     for (i in seq_along(signature)) {
-      signature[[i]] <- as_class(signature[[i]], arg = sprintf("signature[[%i]]", i))
+      signature[i] <- list(as_class(signature[[i]], arg = sprintf("signature[[%i]]", i)))
     }
     new_signature(signature)
   }
@@ -188,9 +181,14 @@ check_method <- function(method, generic, name = paste0(generic@name, "(???)")) 
 
   if (!"..." %in% generic_args && !identical(generic_formals, method_formals)) {
     msg <- sprintf(
-      "%s() lacks `...` so method formals must match generic formals exactly",
+      "%s() generic lacks `...` so method formals must match generic formals exactly.",
       generic@name
     )
+    bullets <- c(
+      sprintf("- generic formals: %s", show_args(generic_formals, name = generic@name)),
+      sprintf("- method formals:  %s", show_args(method_formals, name = generic@name))
+    )
+    msg <- paste0(c(msg, bullets), collapse = "\n")
     stop(msg, call. = FALSE)
   }
 
