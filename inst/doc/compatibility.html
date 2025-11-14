@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -433,17 +434,17 @@ data structure and using a constructor to enforce the structure:</p>
 <span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;   values : int [1:10] 1 2 3 4 5 6 7 8 9 10</span></span></code></pre></div>
 <p>Alternatively you could convert it to the most natural representation
 using S7:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>rle <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;rle&quot;</span>, <span class="at">properties =</span> <span class="fu">list</span>(</span>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>new_rle <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;rle&quot;</span>, <span class="at">properties =</span> <span class="fu">list</span>(</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">lengths =</span> class_integer,</span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">values =</span> class_atomic</span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>))</span></code></pre></div>
 <p>To allow existing methods to work you’ll need to override
 <code>$</code> to access properties instead of list elements:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">method</span>(<span class="st">`</span><span class="at">$</span><span class="st">`</span>, rle) <span class="ot">&lt;-</span> prop</span>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">method</span>(<span class="st">`</span><span class="at">$</span><span class="st">`</span>, new_rle) <span class="ot">&lt;-</span> prop</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">rle</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Run Length Encoding</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt;   lengths: int [1:10] 1 2 3 4 5 6 7 8 9 10</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;   values : logi(0)</span></span></code></pre></div>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt;   lengths: int [1:10] 1 1 1 1 1 1 1 1 1 1</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;   values : int [1:10] 1 2 3 4 5 6 7 8 9 10</span></span></code></pre></div>
 <p>The chief disadvantage of this approach is any subclasses will need
 to be converted to S7 as well.</p>
 </div>

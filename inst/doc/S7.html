@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -398,7 +399,7 @@ of the class:</p>
 supplied in <code>new_class()</code>:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>lola<span class="sc">@</span>age <span class="ot">&lt;-</span> <span class="st">&quot;twelve&quot;</span></span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Dog&gt;@age must be &lt;integer&gt; or &lt;double&gt;, not &lt;character&gt;</span></span></code></pre></div>
-<p>Given an object, you can retrieves its class
+<p>Given an object, you can retrieve its class
 <code>S7_class()</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">S7_class</span>(lola)</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; &lt;Dog&gt; class</span></span>
@@ -547,7 +548,7 @@ of one of those methods:</p>
 <span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a><span class="co">#&gt; {</span></span>
 <span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="co">#&gt;     paste0(x@name, &quot; is &quot;, x@age, &quot; years old&quot;)</span></span>
 <span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="co">#&gt; }</span></span>
-<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co">#&gt; &lt;bytecode: 0x11631e0b0&gt;</span></span></code></pre></div>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co">#&gt; &lt;bytecode: 0x10bbd1248&gt;</span></span></code></pre></div>
 <p>Learn more about method dispatch in
 <code>vignette(&quot;generics-methods&quot;)</code>.</p>
 </div>

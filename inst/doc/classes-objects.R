@@ -29,16 +29,20 @@ Range <- new_class("Range",
 )
 
 ## ----error = TRUE-------------------------------------------------------------
+try({
 x <- Range(1, 2:3)
 x <- Range(10, 1)
 
 x <- Range(1, 10)
 x@start <- 20
+})
 
 ## ----error = TRUE-------------------------------------------------------------
+try({
 x <- Range(1, 2)
 attr(x, "start") <- 3
 validate(x)
+})
 
 ## -----------------------------------------------------------------------------
 shift <- function(x, shift) {
@@ -49,7 +53,9 @@ shift <- function(x, shift) {
 shift(Range(1, 10), 1)
 
 ## ----error = TRUE-------------------------------------------------------------
+try({
 shift(Range(1, 10), 10)
+})
 
 ## -----------------------------------------------------------------------------
 shift <- function(x, shift) {
@@ -70,6 +76,7 @@ Range <- new_class("Range",
 )
 
 ## ----error = TRUE-------------------------------------------------------------
+try({
 prop_number <- new_property(
   class = class_double,
   validator = function(value) {
@@ -95,6 +102,7 @@ Range <- new_class("Range",
 
 Range(start = c(1.5, 3.5))
 Range(end = c(1.5, 3.5))
+})
 
 ## -----------------------------------------------------------------------------
 Empty <- new_class("Empty",
@@ -137,7 +145,7 @@ Range <- new_class("Range",
     start = class_double,
     end = class_double,
     length = new_property(
-      getter = function(self) self@end - self@start,
+      getter = function(self) self@end - self@start
     )
   )
 )
@@ -146,7 +154,9 @@ x <- Range(start = 1, end = 10)
 x
 
 ## ----error = TRUE-------------------------------------------------------------
+try({
 x@length <- 20
+})
 
 ## -----------------------------------------------------------------------------
 Range <- new_class("Range",
@@ -157,6 +167,11 @@ Range <- new_class("Range",
       class = class_double,
       getter = function(self) self@end - self@start,
       setter = function(self, value) {
+        if (!length(value)) {
+          # Do nothing if called with the constructor default
+          # value for this property, a zero-length double vector.
+          return(self)
+        }
         self@end <- self@start + value
         self
       }
@@ -258,11 +273,11 @@ Range <- new_class("Range",
     end = class_numeric
   ),
   constructor = function(x) {
-    new_object(S7_object(), 
-               start = min(x, na.rm = TRUE), 
+    new_object(S7_object(),
+               start = min(x, na.rm = TRUE),
                end = max(x, na.rm = TRUE))
   }
 )
 
-range(c(10, 5, 0, 2, 5, 7))
+Range(c(10, 5, 0, 2, 5, 7))
 

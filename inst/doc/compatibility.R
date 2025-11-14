@@ -51,13 +51,13 @@ new_rle <- new_class("rle",
 rle(1:10)
 
 ## -----------------------------------------------------------------------------
-rle <- new_class("rle", properties = list(
+new_rle <- new_class("rle", properties = list(
   lengths = class_integer,
   values = class_atomic
 ))
 
 ## -----------------------------------------------------------------------------
-method(`$`, rle) <- prop
+method(`$`, new_rle) <- prop
 rle(1:10)
 
 ## -----------------------------------------------------------------------------

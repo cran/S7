@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -350,8 +351,8 @@ write your own constructors.</p>
 <p>S7 classes can have an optional <strong>validator</strong> that
 checks that the values of the properties are OK. A validator is a
 function that takes the object (called <code>self</code>) and returns
-<code>NULL</code> if its valid or returns a character vector listing the
-problems.</p>
+<code>NULL</code> if it’s valid or returns a character vector listing
+the problems.</p>
 <div id="basics" class="section level3">
 <h3>Basics</h3>
 <p>In the following example we create a <code>Range</code> class that
@@ -507,7 +508,7 @@ properties of the same type, as above.</p>
 </div>
 <div id="default-value" class="section level3">
 <h3>Default value</h3>
-<p>The defaults of <code>new_class()</code> create an class that can be
+<p>The defaults of <code>new_class()</code> create a class that can be
 constructed with no arguments:</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>Empty <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Empty&quot;</span>,</span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="at">properties =</span> <span class="fu">list</span>(</span>
@@ -568,7 +569,7 @@ by defining a <code>getter</code>:</p>
 <span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>    <span class="at">start =</span> class_double,</span>
 <span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>    <span class="at">end =</span> class_double,</span>
 <span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>    <span class="at">length =</span> <span class="fu">new_property</span>(</span>
-<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>      <span class="at">getter =</span> <span class="cf">function</span>(self) self<span class="sc">@</span>end <span class="sc">-</span> self<span class="sc">@</span>start,</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>      <span class="at">getter =</span> <span class="cf">function</span>(self) self<span class="sc">@</span>end <span class="sc">-</span> self<span class="sc">@</span>start</span>
 <span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>    )</span>
 <span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>  )</span>
 <span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>)</span>
@@ -600,26 +601,31 @@ the vector:</p>
 <span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>      <span class="at">class =</span> class_double,</span>
 <span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>      <span class="at">getter =</span> <span class="cf">function</span>(self) self<span class="sc">@</span>end <span class="sc">-</span> self<span class="sc">@</span>start,</span>
 <span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>      <span class="at">setter =</span> <span class="cf">function</span>(self, value) {</span>
-<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>        self<span class="sc">@</span>end <span class="ot">&lt;-</span> self<span class="sc">@</span>start <span class="sc">+</span> value</span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>        self</span>
-<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>      }</span>
-<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>    )</span>
-<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>  )</span>
-<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>)</span>
-<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a></span>
-<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="at">start =</span> <span class="dv">1</span>, <span class="at">end =</span> <span class="dv">10</span>)</span>
-<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a>x</span>
-<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="co">#&gt; &lt;Range&gt;</span></span>
-<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt;  @ start : num 1</span></span>
-<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="co">#&gt;  @ end   : num(0) </span></span>
-<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co">#&gt;  @ length: num(0)</span></span>
-<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a></span>
-<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a>x<span class="sc">@</span>length <span class="ot">&lt;-</span> <span class="dv">5</span></span>
-<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a>x</span>
-<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a><span class="co">#&gt; &lt;Range&gt;</span></span>
-<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="co">#&gt;  @ start : num 1</span></span>
-<span id="cb15-27"><a href="#cb15-27" tabindex="-1"></a><span class="co">#&gt;  @ end   : num 6</span></span>
-<span id="cb15-28"><a href="#cb15-28" tabindex="-1"></a><span class="co">#&gt;  @ length: num 5</span></span></code></pre></div>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>        <span class="cf">if</span> (<span class="sc">!</span><span class="fu">length</span>(value)) {</span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>          <span class="co"># Do nothing if called with the constructor default</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>          <span class="co"># value for this property, a zero-length double vector.</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>          <span class="fu">return</span>(self)</span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>        }</span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>        self<span class="sc">@</span>end <span class="ot">&lt;-</span> self<span class="sc">@</span>start <span class="sc">+</span> value</span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a>        self</span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>      }</span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a>    )</span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a>  )</span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a>)</span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="at">start =</span> <span class="dv">1</span>, <span class="at">end =</span> <span class="dv">10</span>)</span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a>x</span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="co">#&gt; &lt;Range&gt;</span></span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a><span class="co">#&gt;  @ start : num 1</span></span>
+<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a><span class="co">#&gt;  @ end   : num 10</span></span>
+<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="co">#&gt;  @ length: num 9</span></span>
+<span id="cb15-27"><a href="#cb15-27" tabindex="-1"></a></span>
+<span id="cb15-28"><a href="#cb15-28" tabindex="-1"></a>x<span class="sc">@</span>length <span class="ot">&lt;-</span> <span class="dv">5</span></span>
+<span id="cb15-29"><a href="#cb15-29" tabindex="-1"></a>x</span>
+<span id="cb15-30"><a href="#cb15-30" tabindex="-1"></a><span class="co">#&gt; &lt;Range&gt;</span></span>
+<span id="cb15-31"><a href="#cb15-31" tabindex="-1"></a><span class="co">#&gt;  @ start : num 1</span></span>
+<span id="cb15-32"><a href="#cb15-32" tabindex="-1"></a><span class="co">#&gt;  @ end   : num 6</span></span>
+<span id="cb15-33"><a href="#cb15-33" tabindex="-1"></a><span class="co">#&gt;  @ length: num 5</span></span></code></pre></div>
 </div>
 <div id="common-patterns" class="section level3">
 <h3>Common Patterns</h3>
@@ -757,14 +763,16 @@ implement this we could do:</p>
 <span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>    <span class="at">end =</span> class_numeric</span>
 <span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>  ),</span>
 <span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a>  <span class="at">constructor =</span> <span class="cf">function</span>(x) {</span>
-<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>    <span class="fu">new_object</span>(<span class="fu">S7_object</span>(), </span>
-<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a>               <span class="at">start =</span> <span class="fu">min</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), </span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a>    <span class="fu">new_object</span>(<span class="fu">S7_object</span>(),</span>
+<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a>               <span class="at">start =</span> <span class="fu">min</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
 <span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a>               <span class="at">end =</span> <span class="fu">max</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
 <span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a>  }</span>
 <span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a>)</span>
 <span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a></span>
-<span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a><span class="fu">range</span>(<span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">5</span>, <span class="dv">7</span>))</span>
-<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a><span class="co">#&gt; [1]  0 10</span></span></code></pre></div>
+<span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a><span class="fu">Range</span>(<span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">5</span>, <span class="dv">7</span>))</span>
+<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a><span class="co">#&gt; &lt;Range&gt;</span></span>
+<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a><span class="co">#&gt;  @ start: num 0</span></span>
+<span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a><span class="co">#&gt;  @ end  : num 10</span></span></code></pre></div>
 <p>A constructor must always end with a call to
 <code>new_object()</code>. The first argument to
 <code>new_object()</code> should be an object of the <code>parent</code>

@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -430,7 +431,7 @@ one type of input, it will succeed for any type of input. To create such
 a generic, you’ll need to use the third argument to
 <code>new_generic()</code>: an optional function that powers the
 generic. This function has one key property: it must call
-<code>call_method()</code> to actually perform dispatch.</p>
+<code>S7_dispatch()</code> to actually perform dispatch.</p>
 <p>In general, this property is only needed for very low-level functions
 with precisely defined semantics. A good example of such a function is
 <code>length()</code>:</p>
@@ -439,7 +440,7 @@ with precisely defined semantics. A good example of such a function is
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>})</span></code></pre></div>
 <p>Omitting <code>…</code> from the generic signature is a strong
 restriction as it prevents methods from adding extra arguments. For this
-reason, it’s should only be used in special situations.</p>
+reason, it should only be used in special situations.</p>
 </div>
 </div>
 <div id="customizing-generics" class="section level2">
@@ -452,7 +453,7 @@ body of the generic:</p>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; function (x, ...) </span></span>
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; S7::S7_dispatch()</span></span></code></pre></div>
 <p>The most important part of the body is <code>S7_dispatch()</code>;
-this function finds the method the matches the arguments used for
+this function finds the method that matches the arguments used for
 dispatch and calls it with the arguments supplied to the generic.</p>
 <p>It can be useful to customize this body. The previous section showed
 one case when you might want to supply the body yourself: dropping
@@ -464,7 +465,7 @@ useful cases:</p>
 <li>Perform some standard work.</li>
 </ul>
 <p>A custom <code>fun</code> must always include a call to
-<code>call_method()</code>, which will usually be the last call.</p>
+<code>S7_dispatch()</code>, which will usually be the last call.</p>
 <div id="add-required-arguments" class="section level3">
 <h3>Add required arguments</h3>
 <p>To add required arguments that aren’t dispatched upon, you just need
@@ -526,11 +527,12 @@ have to provide an alternative argument.</p>
 </div>
 <div id="super" class="section level2">
 <h2><code>super()</code></h2>
-<p>Sometimes it’s useful to define a method for in terms of its
-superclass. A good example of this is computing the mean of a date —
-since dates represent the number of days since 1970-01-01, computing the
-mean is just a matter of computing the mean of the underlying numeric
-vector and converting it back to a date.</p>
+<p>Sometimes it’s useful to define a method for a class that relies on
+the implementation for its superclass. A good example of this is
+computing the mean of a date — since dates represent the number of days
+since 1970-01-01, computing the mean is just a matter of computing the
+mean of the underlying numeric vector and converting it back to a
+date.</p>
 <p>To demonstrate this idea, I’ll first define a mean generic with a
 method for numbers:</p>
 <div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>mean <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
@@ -573,8 +575,8 @@ that would otherwise be very difficult.</p>
 <div id="multiple-dispatch" class="section level2">
 <h2>Multiple dispatch</h2>
 <p>So far we have focused primarily on single dispatch, i.e. generics
-where <code>dispatch_on</code> is a single string. It is also possible
-to supply a length 2 (or more!) vector <code>dispatch_on</code> to
+where <code>dispatch_args</code> is a single string. It is also possible
+to supply a length 2 (or more!) vector <code>dispatch_args</code> to
 create a generic that performs multiple dispatch, i.e. it uses the
 classes of more than one object to find the appropriate method.</p>
 <p>Multiple dispatch is a feature primarily of S4, although S3 includes

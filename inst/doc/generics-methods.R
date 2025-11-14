@@ -12,7 +12,9 @@ mean <- new_generic("mean", "x")
 method(mean, class_numeric) <- function(x) sum(x) / length(x)
 
 ## ----error = TRUE, eval = FALSE-----------------------------------------------
-#  mean(100, na.rm = TRUE)
+try({
+# mean(100, na.rm = TRUE)
+})
 
 ## -----------------------------------------------------------------------------
 method(mean, class_numeric) <- function(x, na.rm = TRUE) {
@@ -37,8 +39,10 @@ method(simple_print, class_list) <- function(x, ...) {
 }
 
 ## ----error = TRUE, eval = FALSE-----------------------------------------------
-#  simple_print(list(1, 2, 3), digits = 3)
-#  simple_print(list(1, 2, "x"), digits = 3)
+try({
+# simple_print(list(1, 2, 3), digits = 3)
+# simple_print(list(1, 2, "x"), digits = 3)
+})
 
 ## -----------------------------------------------------------------------------
 method(simple_print, class_double) <- function(x, ..., digits = 3) {}
@@ -50,9 +54,9 @@ simple_print(list(1, 2, "x"), digits = 3)
 simple_print(list(1, 2, "x"), diggits = 3)
 
 ## ----eval = FALSE-------------------------------------------------------------
-#  length <- new_generic("length", "x", function(x) {
-#    S7_dispatch()
-#  })
+# length <- new_generic("length", "x", function(x) {
+#   S7_dispatch()
+# })
 
 ## -----------------------------------------------------------------------------
 display <- new_generic("display", "x")
