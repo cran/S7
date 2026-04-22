@@ -1,7 +1,4 @@
-#define R_NO_REMAP
-#include <R.h>
-#include <Rinternals.h>
-#include <Rversion.h>
+#include "compat.h"
 
 #if (R_VERSION >= R_Version(4, 5, 0))
 #define getClosureFormals R_ClosureFormals
@@ -58,7 +55,7 @@ SEXP method_rec(SEXP table, SEXP signature, R_xlen_t signature_itr) {
 
   for (R_xlen_t i = 0; i < Rf_xlength(classes); ++i) {
     SEXP klass = Rf_install(CHAR(STRING_ELT(classes, i)));
-    SEXP val = Rf_findVarInFrame(table, klass);
+    SEXP val = s7_get_var_in_frame(table, klass, R_NilValue);
     if (TYPEOF(val) == ENVSXP) {
       PROTECT(val); // no really necessary, but rchk flags spuriously
       val = method_rec(val, signature, signature_itr + 1);
@@ -70,7 +67,7 @@ SEXP method_rec(SEXP table, SEXP signature, R_xlen_t signature_itr) {
   }
 
   // ANY fallback
-  SEXP val = Rf_findVarInFrame(table, sym_ANY);
+  SEXP val = s7_get_var_in_frame(table, sym_ANY, R_NilValue);
   if (TYPEOF(val) == ENVSXP) {
     PROTECT(val);
     val = method_rec(val, signature, signature_itr + 1);

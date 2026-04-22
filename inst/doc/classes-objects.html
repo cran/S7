@@ -392,24 +392,28 @@ interactions between properties.</p>
 <p>Objects are validated automatically when constructed and when any
 property is modified:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="dv">1</span>, <span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Range&gt; object properties are invalid:</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; - @end must be &lt;double&gt;, not &lt;integer&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="dv">10</span>, <span class="dv">1</span>)</span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Range&gt; object is invalid:</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; - @end (1) must be greater than or equal to @start (10)</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="dv">1</span>, <span class="dv">10</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>x<span class="sc">@</span>start <span class="ot">&lt;-</span> <span class="dv">20</span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Range&gt; object is invalid:</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; - @end (10) must be greater than or equal to @start (20)</span></span></code></pre></div>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; ! &lt;Range&gt; object properties are invalid:</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; - @end must be &lt;double&gt;, not &lt;integer&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="dv">10</span>, <span class="dv">1</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; ! &lt;Range&gt; object is invalid:</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; - @end (1) must be greater than or equal to @start (10)</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="dv">1</span>, <span class="dv">10</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>x<span class="sc">@</span>start <span class="ot">&lt;-</span> <span class="dv">20</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; ! &lt;Range&gt; object is invalid:</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; - @end (10) must be greater than or equal to @start (20)</span></span></code></pre></div>
 <p>You can also manually <code>validate()</code> an object if you use a
 low-level R function to bypass the usual checks and balances of
 <code>@</code>:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">Range</span>(<span class="dv">1</span>, <span class="dv">2</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">attr</span>(x, <span class="st">&quot;start&quot;</span>) <span class="ot">&lt;-</span> <span class="dv">3</span></span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">validate</span>(x)</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Range&gt; object is invalid:</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; - @end (2) must be greater than or equal to @start (3)</span></span></code></pre></div>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; ! &lt;Range&gt; object is invalid:</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; - @end (2) must be greater than or equal to @start (3)</span></span></code></pre></div>
 </div>
 <div id="avoiding-validation" class="section level3">
 <h3>Avoiding validation</h3>
@@ -427,8 +431,9 @@ the left or the right:</p>
 <p>There’s a problem if <code>shift</code> is larger than
 <code>@end</code> - <code>@start</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">shift</span>(<span class="fu">Range</span>(<span class="dv">1</span>, <span class="dv">10</span>), <span class="dv">10</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Range&gt; object is invalid:</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; - @end (10) must be greater than or equal to @start (11)</span></span></code></pre></div>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; ! &lt;Range&gt; object is invalid:</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; - @end (10) must be greater than or equal to @start (11)</span></span></code></pre></div>
 <p>While the end result of <code>shift()</code> will be valid, an
 intermediate state is not. The easiest way to resolve this problem is to
 set the properties all at once:</p>
@@ -494,13 +499,15 @@ could implement those at the property level:</p>
 <span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>)</span>
 <span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a></span>
 <span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="fu">Range</span>(<span class="at">start =</span> <span class="fu">c</span>(<span class="fl">1.5</span>, <span class="fl">3.5</span>))</span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Range&gt; object properties are invalid:</span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; - @start must be length 1</span></span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; - @end must be length 1</span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="fu">Range</span>(<span class="at">end =</span> <span class="fu">c</span>(<span class="fl">1.5</span>, <span class="fl">3.5</span>))</span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Range&gt; object properties are invalid:</span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt; - @start must be length 1</span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; - @end must be length 1</span></span></code></pre></div>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; ! &lt;Range&gt; object properties are invalid:</span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; - @start must be length 1</span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; - @end must be length 1</span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="fu">Range</span>(<span class="at">end =</span> <span class="fu">c</span>(<span class="fl">1.5</span>, <span class="fl">3.5</span>))</span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; ! &lt;Range&gt; object properties are invalid:</span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt; - @start must be length 1</span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt; - @end must be length 1</span></span></code></pre></div>
 <p>Note that property validators shouldn’t include the name of the
 property in validation messages as S7 will add it automatically. This
 makes it possible to use the same property definition for multiple
@@ -582,7 +589,8 @@ by defining a <code>getter</code>:</p>
 <span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt;  @ length: num 9</span></span></code></pre></div>
 <p>Computed properties are read-only:</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>x<span class="sc">@</span>length <span class="ot">&lt;-</span> <span class="dv">20</span></span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; Error: Can&#39;t set read-only property &lt;Range&gt;@length</span></span></code></pre></div>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt; ! Can&#39;t set read-only property &lt;Range&gt;@length</span></span></code></pre></div>
 </div>
 <div id="dynamic-properties" class="section level3">
 <h3>Dynamic properties</h3>

@@ -398,7 +398,8 @@ of the class:</p>
 <p>S7 automatically validates the type of the property using the type
 supplied in <code>new_class()</code>:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>lola<span class="sc">@</span>age <span class="ot">&lt;-</span> <span class="st">&quot;twelve&quot;</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; Error: &lt;Dog&gt;@age must be &lt;integer&gt; or &lt;double&gt;, not &lt;character&gt;</span></span></code></pre></div>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; ! &lt;Dog&gt;@age must be &lt;integer&gt; or &lt;double&gt;, not &lt;character&gt;</span></span></code></pre></div>
 <p>Given an object, you can retrieve its class
 <code>S7_class()</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">S7_class</span>(lola)</span>
@@ -460,7 +461,8 @@ method for <code>speak()</code>:</p>
 <p>You get an error if you call the generic with a class that doesn’t
 have a method:</p>
 <div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">speak</span>(<span class="dv">1</span>)</span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; Error: Can&#39;t find method for `speak(&lt;double&gt;)`.</span></span></code></pre></div>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; Error:</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co">#&gt; ! Can&#39;t find method for `speak(&lt;double&gt;)`.</span></span></code></pre></div>
 </div>
 <div id="method-dispatch-and-inheritance" class="section level2">
 <h2>Method dispatch and inheritance</h2>
@@ -548,7 +550,7 @@ of one of those methods:</p>
 <span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a><span class="co">#&gt; {</span></span>
 <span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="co">#&gt;     paste0(x@name, &quot; is &quot;, x@age, &quot; years old&quot;)</span></span>
 <span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="co">#&gt; }</span></span>
-<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co">#&gt; &lt;bytecode: 0x10bbd1248&gt;</span></span></code></pre></div>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co">#&gt; &lt;bytecode: 0x1335c0130&gt;</span></span></code></pre></div>
 <p>Learn more about method dispatch in
 <code>vignette(&quot;generics-methods&quot;)</code>.</p>
 </div>
