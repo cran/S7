@@ -10,6 +10,7 @@
 #'   * An S3 class (created by [new_S3_class()]).
 #'   * An S4 class (created by [methods::getClass()] or [methods::new()]).
 #'   * A base class, like [class_logical], [class_integer], or [class_double].
+#'   * `NULL`.
 #'   * A "special", either [class_missing] or [class_any].
 #' @param arg Argument name used when generating errors.
 #' @keywords internal
@@ -20,7 +21,11 @@
 #' as_class(class_logical)
 #' as_class(new_S3_class("factor"))
 as_class <- function(x, arg = deparse(substitute(x))) {
-  error_base <- sprintf("Can't convert `%s` to a valid class. ", arg)
+  error_base <- sprintf("Can't convert `%s` to a valid class.", arg)
+
+  if (is_deprecated_class(x)) {
+    x <- deprecated_target(x)
+  }
 
   if (is_foundation_class(x)) {
     x
@@ -29,10 +34,21 @@ as_class <- function(x, arg = deparse(substitute(x))) {
     # so it can't be wrapped in new_base_class
     x
   } else if (isS4(x)) {
-    S4_to_S7_class(x, error_base)
+    S4_to_S7_class(x, error_base, call = sys.call(-1L))
   } else {
-    msg <- sprintf("Class specification must be an S7 class object, the result of `new_S3_class()`, an S4 class object, or a base class, not a %s.", obj_desc(x))
-    stop(paste0(error_base, msg), call. = FALSE)
+    msg <- c(
+      error_base,
+      sprintf(
+        "Class specification must be one of the following, not a %s:",
+        obj_desc(x)
+      ),
+      " * An S7 class object",
+      " * An S3 class object (from `new_S3_class()`)",
+      " * An S4 class object",
+      " * A base class"
+    )
+
+    stop2(msg)
   }
 }
 
@@ -41,34 +57,32 @@ is_foundation_class <- function(x) {
     is_union(x) ||
     is_base_class(x) ||
     is_S3_class(x) ||
+    is_external_class(x) ||
     is_class_missing(x) ||
     is_class_any(x)
 }
 
 class_type <- function(x) {
+  .Call(class_type_, x)
+}
+
+class_properties <- function(x) {
+  # Needed to bootstrap S7 before DLL registered
   if (is.null(x)) {
-    "NULL"
-  } else if (is_class_missing(x)) {
-    "missing"
-  } else if (is_class_any(x)) {
-    "any"
-  } else if (is_base_class(x)) {
-    "S7_base"
-  } else if (is_class(x)) {
-    "S7"
-  } else if (is_union(x)) {
-    "S7_union"
-  } else if (is_S3_class(x)) {
-    "S7_S3"
-  } else if (is_S4_class(x)) {
-    "S4"
-  } else {
-    stop("`x` is not standard S7 class", call. = FALSE)
+    return(list())
   }
+
+  switch(
+    class_type(x),
+    S7 = attr(x, "properties", exact = TRUE) %||% list(),
+    S4 = S4_slot_properties(x),
+    list()
+  )
 }
 
 class_friendly <- function(x) {
-  switch(class_type(x),
+  switch(
+    class_type(x),
     NULL = "NULL",
     missing = "a missing argument",
     any = "any type",
@@ -77,6 +91,7 @@ class_friendly <- function(x) {
     S7_base = "a base type",
     S7_union = "an S7 union",
     S7_S3 = "an S3 class",
+    S7_external = "an external S7 class",
   )
 }
 
@@ -86,6 +101,23 @@ class_construct <- function(.x, ...) {
 
 
 class_construct_expr <- function(.x, envir = NULL, package = NULL) {
+  # External classes get a quoted call so the default is built when the object
+  # is constructed rather than when the class is defined.
+  ctor_class <- if (is_union(.x)) .x$classes[[1L]] else .x
+  if (is_external_class(ctor_class)) {
+    if (identical(package, ctor_class$package)) {
+      cl <- as.name(ctor_class$name)
+    } else {
+      cl <- call("::", as.name(ctor_class$package), as.name(ctor_class$name))
+    }
+    # Return before class_constructor() to keep the package lookup deferred.
+    return(bquote(S7::as_class(.(cl))()))
+  }
+
+  if (is_S3_class(ctor_class) && !is.null(ctor_class$default)) {
+    return(ctor_class$default)
+  }
+
   f <- class_constructor(.x)
 
   # For S7 class constructors with a non-NULL @package property
@@ -96,7 +128,8 @@ class_construct_expr <- function(.x, envir = NULL, package = NULL) {
     # Note: During package build, using pkg::class for a package's own symbols
     # will raise an error from `::`.
     if (identical(package, f@package)) {
-      return(call(f@name))
+      cl <- as.name(f@name)
+      f2 <- get(f@name, envir = envir)
     } else {
       # namespace the pkgname::classname() call
       cl <- as.call(list(quote(`::`), as.name(f@package), as.name(f@name)))
@@ -104,13 +137,18 @@ class_construct_expr <- function(.x, envir = NULL, package = NULL) {
       # check the call evaluates to f.
       # This will error if package is not installed or object is not exported.
       f2 <- eval(cl, baseenv())
-      if (!identical(f, f2)) {
+      if (!identical(f, as_class(f2))) {
         msg <- sprintf(
-          "`%s::%s` is not identical to the class with the same @package and @name properties",
-          f@package, f@name
+          "`%s::%s` is not identical to the class with the same @package and @name properties.",
+          f@package,
+          f@name
         )
-        stop(msg, call. = FALSE)
+        stop2(msg, call = NULL)
       }
+    }
+    if (is_deprecated_class(f2)) {
+      return(bquote(S7::as_class(.(cl))()))
+    } else {
       return(as.call(list(cl)))
     }
   }
@@ -120,15 +158,14 @@ class_construct_expr <- function(.x, envir = NULL, package = NULL) {
   # (mostly for nicer printing and introspection.)
 
   # can't unwrap if the closure is potentially important
-  # (this can probably be relaxed to allow additional environments)
   fe <- environment(f)
-  if (!identical(fe, baseenv())) {
+  if (!identical(fe, baseenv()) && !identical(fe, asNamespace("S7"))) {
     return(as.call(list(f)))
   }
 
   # special case for `class_missing`
-  if (identical(body(f) -> fb, quote(expr =))) {
-    return(quote(expr =))
+  if (identical(body(f) -> fb, quote(expr = ))) {
+    return(quote(expr = ))
   }
 
   # `new_object()` must be called from the class constructor, can't
@@ -138,14 +175,17 @@ class_construct_expr <- function(.x, envir = NULL, package = NULL) {
   }
 
   # maybe unwrap body if it is a single expression wrapped in `{`
-  if (length(fb) == 2L && identical(fb[[1L]], quote(`{`)))
+  if (length(fb) == 2L && identical(fb[[1L]], quote(`{`))) {
     fb <- fb[[2L]]
+  }
 
   # If all the all the work happens in the promise to the `.data` arg,
   # return the `.data` expression.
   ff <- formals(f)
-  if ((identical(fb, quote(.data))) &&
-      identical(names(ff), ".data")) {
+  if (
+    (identical(fb, quote(.data))) &&
+      identical(names(ff), ".data")
+  ) {
     return(ff$.data)
   }
 
@@ -159,25 +199,39 @@ class_construct_expr <- function(.x, envir = NULL, package = NULL) {
 }
 
 class_constructor <- function(.x) {
-  switch(class_type(.x),
-         any = ,
-         NULL = new_function(env = baseenv()),
-         missing = new_function(, quote(expr =), baseenv()),
-         S4 = function(...) methods::new(.x, ...),
-         S7 = .x,
-         S7_base = .x$constructor,
-         S7_union = class_constructor(.x$classes[[1]]),
-         S7_S3 = .x$constructor,
-         stop(sprintf("Can't construct %s", class_friendly(.x)), call. = FALSE)
+  switch(
+    class_type(.x),
+    any = ,
+    NULL = new_function(env = baseenv()),
+    missing = new_function(, quote(expr = ), baseenv()),
+    S4 = function(...) methods::new(.x, ...),
+    S7 = .x,
+    S7_base = .x$constructor,
+    S7_union = class_constructor(.x$classes[[1]]),
+    S7_S3 = .x$constructor,
+    S7_external = class_constructor(resolve_external_class_req(.x)),
+    stop2(sprintf("Can't construct %s.", class_friendly(.x)), call = NULL)
   )
 }
 
 class_validate <- function(class, object) {
-  validator <- switch(class_type(class),
-    S4 = methods::validObject,
-    S7 = class@validator,
+  if (is_S4_class(class)) {
+    if (isS4(object)) {
+      check <- methods::validObject(object, test = TRUE)
+      return(if (isTRUE(check)) NULL else check)
+    } else {
+      return(NULL)
+    }
+  }
+
+  validator <- switch(
+    class_type(class),
+    S7 = attr(class, "validator", TRUE), # runs on every construction
     S7_base = class$validator,
     S7_S3 = class$validator,
+    S7_external = function(object) {
+      class_validate(resolve_external_class_req(class), object)
+    },
     NULL
   )
 
@@ -188,8 +242,27 @@ class_validate <- function(class, object) {
   }
 }
 
+#' Format a class specification as a string
+#'
+#' `S7_class_desc()` turns any [class specification][as_class] into a short,
+#' human-readable, string, suitable for use in user-facing messages.
+#'
+#' @param class A [class specification][as_class].
+#' @returns A string.
+#' @export
+#' @examples
+#' S7_class_desc(class_integer)
+#' S7_class_desc(new_S3_class("data.frame"))
+#' S7_class_desc(class_integer | class_double)
+#' S7_class_desc(NULL)
+S7_class_desc <- function(class) {
+  class <- as_class(class)
+  class_desc(class)
+}
+
 class_desc <- function(x) {
-  switch(class_type(x),
+  switch(
+    class_type(x),
     NULL = "<NULL>",
     missing = "<MISSING>",
     any = "<ANY>",
@@ -198,30 +271,31 @@ class_desc <- function(x) {
     S7_base = paste0("<", x$class, ">"),
     S7_union = oxford_or(unlist(lapply(x$classes, class_desc))),
     S7_S3 = paste0("S3<", paste0(x$class, collapse = "/"), ">"),
+    S7_external = paste0("<", x$class_name, ">"),
   )
 }
 
 # Vector of class names; used in method introspection
 class_dispatch <- function(x) {
-  if (is_class(x) && x@name == "S7_object") {
-    return("S7_object")
-  }
-
-  switch(class_type(x),
+  switch(
+    class_type(x),
     NULL = "NULL",
     missing = "MISSING",
     any = character(),
     S4 = S4_class_dispatch(methods::extends(x)),
-    S7 = c(S7_class_name(x), class_dispatch(x@parent)),
+    S7 = attr(x, "S7_dispatch", exact = TRUE) %||%
+      S7_class_dispatch(S7_class_name(x), x@parent),
     S7_base = c(x$class, "S7_object"),
     S7_S3 = c(x$class, "S7_object"),
-    stop("Unsupported")
+    S7_external = class_dispatch(resolve_external_class_req(x)),
+    stop2("Unsupported class type.", call = NULL)
   )
 }
 
 # Class name when registering an S7 method
 class_register <- function(x) {
-  switch(class_type(x),
+  switch(
+    class_type(x),
     NULL = "NULL",
     missing = "MISSING",
     any = "ANY",
@@ -229,13 +303,15 @@ class_register <- function(x) {
     S7 = S7_class_name(x),
     S7_base = x$class,
     S7_S3 = x$class[[1]],
-    stop("Unsupported")
+    S7_external = x$class_name,
+    stop2("Unsupported class type.", call = NULL)
   )
 }
 
 # Used when printing method signature to generate executable code
 class_deparse <- function(x) {
-  switch(class_type(x),
+  switch(
+    class_type(x),
     "NULL" = "NULL",
     missing = "class_missing",
     any = "class_any",
@@ -247,32 +323,121 @@ class_deparse <- function(x) {
       paste0("new_union(", paste(classes, collapse = ", "), ")")
     },
     S7_S3 = paste0("new_S3_class(", deparse1(x$class), ")"),
+    S7_external = {
+      args <- c(deparse1(x$package), deparse1(x$name))
+      if (!is.null(x$version)) {
+        args <- c(args, paste0("version = ", deparse1(x$version)))
+      }
+      sprintf("new_external_class(%s)", paste(args, collapse = ", "))
+    },
   )
 }
 
 class_inherits <- function(x, what) {
-  switch(class_type(what),
+  switch(
+    class_type(what),
     "NULL" = is.null(x),
     missing = FALSE,
     any = TRUE,
-    S4 = isS4(x) && methods::is(x, what),
+    S4 = methods::is(x, what),
+    # Class-vector-only objects have no stored class to inspect.
     S7 = inherits(x, "S7_object") && inherits(x, S7_class_name(what)),
     S7_base = what$class == base_class(x),
-    S7_union = any(vlapply(what$classes, class_inherits, x = x)),
-    # This is slightly too crude as we really want them to be in the same
-    # order and contiguous, but it's probably close enough for practical
-    # purposes
-    S7_S3 = !isS4(x) && all(what$class %in% class(x)),
+    S7_union = some(what$classes, class_inherits, x = x),
+    S7_S3 = !isS4(x) &&
+      class_dispatch_inherits(what$class, class(x)),
+    S7_external = class_inherits_external(x, what),
   )
+}
+
+class_inherits_external <- function(x, what) {
+  if (!inherits(x, "S7_object")) {
+    return(FALSE)
+  }
+  if (inherits(x, what$class_name)) {
+    return(TRUE)
+  }
+  if (!isNamespaceLoaded(what$package)) {
+    return(FALSE)
+  }
+
+  # The exported name may be an alias for a renamed class.
+  class_inherits(x, resolve_external_class_req(what))
+}
+
+# Is every instance of `child` guaranteed to also be an instance of `parent`?
+# Used to check that a child class only narrows the type of a property
+class_extends <- function(child, parent) {
+  if (identical(child, parent)) {
+    TRUE
+  } else if (is_class_any(parent) || union_contains_any(parent)) {
+    # as a parent, `class_any` accepts every child class
+    TRUE
+  } else if (is_class_any(child)) {
+    # as a child, `class_any` only allows `class_any` as a parent
+    FALSE
+  } else if (is_union(child)) {
+    # A union child extends `parent` only if every one of its members does.
+    every(child$classes, class_extends, parent = parent)
+  } else if (is_union(parent)) {
+    # A non-union child extends a union parent if it extends any of its members.
+    some(parent$classes, class_extends, child = child)
+  } else if (is.null(child) && !is.null(parent)) {
+    # as a child, NULL can only extend NULL
+    FALSE
+  } else if (is.null(parent)) {
+    # as a parent, NULL only accepts NULL
+    is.null(child)
+  } else if (is_class(parent) && parent@name == "S7_object") {
+    is_class(child) || is_external_class(child)
+  } else if (is_external_class(child)) {
+    child <- resolve_external_class_req(child)
+    class_extends(child, parent)
+  } else if (is_class(child) && is_external_class(parent)) {
+    if (!class_dispatch_extends(parent$class_name, class_dispatch(child))) {
+      if (isNamespaceLoaded(parent$package)) {
+        return(class_extends(child, resolve_external_class_req(parent)))
+      }
+      return(FALSE)
+    }
+    if (!is.null(parent$version)) {
+      resolve_external_class_req(parent)
+    }
+    TRUE
+  } else if (is_external_class(parent)) {
+    parent <- resolve_external_class_req(parent)
+    class_extends(child, parent)
+  } else if (is_S3_class(child) && is_S3_class(parent)) {
+    class_dispatch_inherits(parent$class, child$class)
+  } else if (is_S4_class(child) || is_S4_class(parent)) {
+    child <- class_extends_S4_name(child)
+    parent <- class_extends_S4_name(parent)
+    !is.null(child) &&
+      !is.null(parent) &&
+      methods::extends(child, parent)
+  } else {
+    # handle S7, S3, and base types.
+    class_dispatch_extends(class_dispatch(parent), class_dispatch(child))
+  }
+}
+
+class_extends_S4_name <- function(class) {
+  if (is_S4_class(class)) {
+    class@className
+  } else if (is_class(class)) {
+    S7_class_name(class)
+  } else {
+    NULL
+  }
 }
 
 obj_type <- function(x) {
   if (identical(x, quote(expr = ))) {
     "missing"
-  } else if (inherits(x, "S7_object")) {
-    "S7"
   } else if (isS4(x)) {
     "S4"
+  } else if (has_S7_class(x)) {
+    "S7"
   } else if (is.object(x)) {
     "S3"
   } else {
@@ -280,7 +445,8 @@ obj_type <- function(x) {
   }
 }
 obj_desc <- function(x) {
-  switch(obj_type(x),
+  switch(
+    obj_type(x),
     missing = "MISSING",
     base = paste0("<", typeof(x), ">"),
     S3 = paste0("S3<", paste(class(x), collapse = "/"), ">"),
@@ -289,7 +455,8 @@ obj_desc <- function(x) {
   )
 }
 obj_dispatch <- function(x) {
-  switch(obj_type(x),
+  switch(
+    obj_type(x),
     missing = "MISSING",
     base = base_class(x),
     S3 = class(x),
@@ -298,18 +465,51 @@ obj_dispatch <- function(x) {
   )
 }
 
-base_class <- function(x) {
-  switch(typeof(x),
-    closure = "function",
-    special = "function",
-    builtin = "function",
-    language = "call",
-    symbol = "name",
-    typeof(x)
-  )
+# helpers -----------------------------------------------------------------
+
+# Does `child`'s S3 class vector contain `parent`'s as a contiguous, ordered
+# run? An S3 class specification is often a partial class vector that omits
+# shared trailing classes, e.g. `new_S3_class("Coord")` for objects of class
+# c("CoordCartesian", "Coord", "ggproto", "gg") (#747). Downcasts instead need
+# the strict tail matching of `class_dispatch_extends()`.
+# S7 wrappers of base/S3 types append "S7_object", which we ignore.
+class_dispatch_inherits <- function(parent, child) {
+  parent <- drop_S7_object(parent)
+  child <- drop_S7_object(child)
+  n <- length(parent)
+  if (length(child) < n) {
+    return(FALSE)
+  }
+  if (n == 1L) {
+    return(parent[[1L]] %in% child)
+  }
+
+  for (start in seq_len(length(child) - n + 1L)) {
+    if (identical(child[seq.int(start, length.out = n)], parent)) {
+      return(TRUE)
+    }
+  }
+  FALSE
 }
 
-# helpers -----------------------------------------------------------------
+# Does `child`'s dispatch extend `parent`'s? Subclassing only ever prepends
+# more specific classes, so `parent`'s classes must form the tail of `child`'s.
+# S7 wrappers of base/S3 types append "S7_object", which we ignore.
+class_dispatch_extends <- function(parent, child) {
+  parent <- drop_S7_object(parent)
+  child <- drop_S7_object(child)
+  n <- length(parent)
+  length(child) >= n && identical(child[length(child) - n + seq_len(n)], parent)
+}
+
+drop_S7_object <- function(x) {
+  n <- length(x)
+  if (n > 0 && x[[n]] == "S7_object") x[-n] else x
+}
+
+union_contains_any <- function(x) {
+  is_union(x) && some(x$classes, is_class_any)
+}
 
 # Suppress @className false positive
 globalVariables("className")

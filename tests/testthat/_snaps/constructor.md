@@ -1,36 +1,34 @@
 # generates meaningful constructors
 
     Code
-      new_constructor(S7_object, list())
+      Root@constructor
     Output
       function () 
       {
-          new_object(S7_object())
+          S7::new_object(S7::S7_object())
       }
-      <environment: namespace:S7>
+      <environment: 0x0>
     Code
-      new_constructor(S7_object, as_properties(list(x = class_numeric, y = class_numeric)))
+      Props@constructor
     Output
       function (x = integer(0), y = integer(0)) 
       {
           x
           y
-          new_object(S7_object(), x = x, y = y)
+          S7::new_object(S7::S7_object(), x = x, y = y)
       }
-      <environment: namespace:S7>
-    Code
-      foo <- new_class("foo", parent = class_character)
-      new_constructor(foo, list())
-    Output
-      function (.data = character(0)) 
-      new_object(foo(.data = .data))
       <environment: 0x0>
     Code
-      foo2 <- new_class("foo2", parent = foo)
-      new_constructor(foo2, list())
+      foo2@constructor
     Output
       function (.data = character(0)) 
-      new_object(foo2(.data = .data))
+      S7::new_object(foo(.data = .data))
+      <environment: 0x0>
+    Code
+      foo3@constructor
+    Output
+      function (.data = character(0)) 
+      S7::new_object(foo2(.data = .data))
       <environment: 0x0>
 
 # can generate constructors for S3 classes
@@ -52,30 +50,58 @@
 # can generate constructor for inherited abstract classes
 
     Code
-      foo1 <- new_class("foo1", abstract = TRUE, properties = list(x = class_double))
-      new_constructor(foo1, list())
+      foo2@constructor
     Output
-      function () 
+      function (x = numeric(0)) 
       {
-          new_object(S7_object())
+          x
+          S7::new_object(S7::S7_object(), x = x)
       }
-      <environment: namespace:S7>
+      <environment: 0x0>
     Code
-      new_constructor(foo1, as_properties(list(y = class_double)))
+      foo3@constructor
     Output
-      function (y = numeric(0)) 
+      function (x = numeric(0), y = numeric(0)) 
       {
+          x
           y
-          new_object(S7_object(), y = y)
+          S7::new_object(S7::S7_object(), x = x, y = y)
       }
-      <environment: namespace:S7>
+      <environment: 0x0>
 
 # can use `...` in parent constructor
 
     Code
-      new_constructor(foo, list(y = class_double))
+      bar@constructor
     Output
       function (..., y = numeric(0)) 
-      new_object(foo(...), y = y)
+      S7::new_object(foo(...), y = y)
       <environment: 0x0>
+
+# forwarding constructor passes overrides to both parent and object
+
+    Code
+      new_constructor(P, as_properties(list(a = new_property(class_double, default = 99),
+      b = class_double)))
+    Output
+      function (..., a = 99, b = numeric(0)) 
+      new_object(P(a = a, ...), a = a, b = b)
+      <environment: 0x0>
+
+# subclasses can make parent properties read-only after construction
+
+    Code
+      child@parent_prop <- 3
+    Condition
+      Error in `<S7::Child>@parent_prop`:
+      ! Can't set read-only property.
+
+# read-only overrides preserve parent validation
+
+    Code
+      Child(parent_prop = 1, other_prop = 2)
+    Condition
+      Error in `Parent()`:
+      ! <S7::Parent> object is invalid:
+      - @other_prop must not exceed @parent_prop
 

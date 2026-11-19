@@ -1,5 +1,5 @@
 test_that("can work with S7 classes", {
-  klass <- new_class("klass", package = NULL)
+  klass := new_class(package = NULL)
   expect_equal(as_class(klass), klass)
 
   expect_equal(class_type(klass), "S7")
@@ -17,7 +17,7 @@ test_that("can work with S7 classes", {
 })
 
 test_that("can work with S7 classes in packages", {
-  klass <- new_class("klass", package = "pkg")
+  klass := new_class(package = "pkg")
   expect_equal(as_class(klass), klass)
 
   expect_equal(class_type(klass), "S7")
@@ -34,9 +34,60 @@ test_that("can work with S7 classes in packages", {
   expect_equal(class_inherits(obj, klass), TRUE)
 })
 
+test_that("S7 class name and dispatch are cached", {
+  parent := new_class(package = "pkg")
+  child := new_class(parent = parent, package = "pkg")
+
+  expect_identical(attr(child, "S7_class_name", exact = TRUE), "pkg::child")
+  expect_identical(
+    attr(child, "S7_dispatch", exact = TRUE),
+    c("pkg::child", "pkg::parent", "S7_object")
+  )
+
+  # the caches are used, not recomputed
+  attr(child, "S7_class_name") <- "cached name"
+  attr(child, "S7_dispatch") <- "cached dispatch"
+  expect_identical(S7_class_name(child), "cached name")
+  expect_identical(class_dispatch(child), "cached dispatch")
+})
+
+test_that("S7 class dispatch supports classes without a cache", {
+  parent := new_class(package = "pkg")
+  child := new_class(parent = parent, package = "pkg")
+  obj <- child()
+
+  # Classes created by older versions of S7 don't have a cache
+  attr(child, "S7_class_name") <- NULL
+  attr(child, "S7_dispatch") <- NULL
+  expect_identical(S7_class_name(child), "pkg::child")
+  expect_identical(
+    class_dispatch(child),
+    c("pkg::child", "pkg::parent", "S7_object")
+  )
+  expect_equal(class_inherits(obj, child), TRUE)
+})
+
+test_that("class_inherits() handles special S7 objects", {
+  Child := new_class(package = NULL)
+
+  expect_equal(class_inherits(S7_object(), S7_object), TRUE)
+  expect_equal(class_inherits(Child, S7_object), TRUE)
+  expect_equal(class_inherits(structure(1, class = "Child"), Child), FALSE)
+})
+
+test_that("class_type() recognizes special class specifications", {
+  expect_identical(class_type(class_missing), "missing")
+  expect_identical(class_type(class_any), "any")
+  expect_identical(
+    class_type(structure(list(), class = c("S7_external_class", "S7_any"))),
+    "any"
+  )
+  expect_snapshot(class_type(1), error = TRUE)
+})
+
 test_that("can work with unions", {
-  text <- new_class("text", class_character, package = NULL)
-  number <- new_class("number", class_double, package = NULL)
+  text := new_class(class_character, package = NULL)
+  number := new_class(class_double, package = NULL)
   klass <- new_union(text, number)
   expect_equal(as_class(klass), klass)
 
@@ -102,6 +153,36 @@ test_that("class_inherits handles variation in class names", {
   expect_false(class_inherits("x", class_function))
 })
 
+test_that("class_extends checks subclass relationship between classes", {
+  Parent := new_class(package = NULL)
+  Child := new_class(parent = Parent, package = NULL)
+
+  expect_true(class_extends(Child, Parent))
+  expect_true(class_extends(Child, Child))
+  expect_false(class_extends(Parent, Child))
+
+  # base types
+  expect_true(class_extends(class_integer, class_integer))
+  expect_false(class_extends(class_integer, class_character))
+})
+
+test_that("class_extends handles unions, any, and NULL", {
+  # union parent accepts any member; union child must have all members extend
+  expect_true(class_extends(class_double, class_numeric))
+  expect_false(class_extends(class_numeric, class_double))
+  expect_true(class_extends(class_numeric, class_numeric))
+
+  # class_any is the top type
+  expect_true(class_extends(class_integer, class_any))
+  expect_false(class_extends(class_any, class_integer))
+  expect_true(class_extends(class_any, class_any))
+
+  # NULL only extends NULL
+  expect_true(class_extends(NULL, NULL))
+  expect_false(class_extends(NULL, class_integer))
+  expect_false(class_extends(class_integer, NULL))
+})
+
 test_that("dispatch for base objects use underlying type", {
   expect_equal(obj_dispatch(1), "double")
   expect_equal(obj_dispatch(1L), "integer")
@@ -122,7 +203,8 @@ test_that("dispatch for base objects use underlying type", {
 # S3 ----------------------------------------------------------------------
 
 test_that("can work with S3 classes", {
-  klass <- new_S3_class(c("ordered", "factor"),
+  klass <- new_S3_class(
+    c("ordered", "factor"),
     constructor = function(.data = numeric(), levels) ordered(.data, levels)
   )
   expect_equal(as_class(klass), klass)
@@ -142,10 +224,31 @@ test_that("can work with S3 classes", {
   expect_equal(class_inherits(factor(), klass), FALSE)
 })
 
+test_that("class_inherits() requires S3 classes to be contiguous and ordered", {
+  klass <- new_S3_class(c("a", "b"))
+
+  # `klass`'s classes all present, but not contiguously
+  gappy <- structure(list(), class = c("a", "x", "b"))
+  expect_equal(class_inherits(gappy, klass), FALSE)
+
+  # `klass`'s classes all present, but in the wrong order
+  reversed <- structure(list(), class = c("b", "a"))
+  expect_equal(class_inherits(reversed, klass), FALSE)
+
+  # A genuine contiguous, ordered run succeeds
+  ok <- structure(list(), class = c("z", "a", "b"))
+  expect_equal(class_inherits(ok, klass), TRUE)
+})
+
 test_that("can work with S7 classes that extend S3 classes", {
-  Date <- new_S3_class("Date", constructor = function(.data = numeric()) .Date(.data))
-  Date2 <- new_class("Date2", parent = Date, properties = list(x = class_numeric),
-                     package = NULL)
+  Date <- new_S3_class("Date", constructor = function(.data = numeric()) {
+    .Date(.data)
+  })
+  Date2 := new_class(
+    parent = Date,
+    properties = list(x = class_numeric),
+    package = NULL
+  )
 
   expect_equal(class_type(Date2), "S7")
   expect_equal(class_dispatch(Date2), c("Date2", "Date", "S7_object"))
@@ -160,20 +263,87 @@ test_that("can work with S7 classes that extend S3 classes", {
   expect_equal(class_inherits(obj, Date2), TRUE)
 })
 
+test_that("exported S3 wrappers have compact executable property defaults", {
+  wrappers <- list(
+    class_factor = class_factor,
+    class_Date = class_Date,
+    class_POSIXct = class_POSIXct,
+    class_POSIXlt = class_POSIXlt
+  )
+  defaults <- alist(
+    class_factor = factor(),
+    class_Date = .Date(numeric()),
+    class_POSIXct = .POSIXct(numeric(), tz = ""),
+    class_POSIXlt = as.POSIXlt(NULL, tz = "")
+  )
+  for (name in names(wrappers)) {
+    Wrapper := new_class(properties = list(value = wrappers[[name]]))
+    default <- formals(Wrapper)$value
+    expect_identical(default, defaults[[name]])
+    expect_identical(parse(text = deparse(default))[[1L]], default)
+    expect_identical(Wrapper()@value, wrappers[[name]]$constructor())
+  }
+})
+
+test_that("formula property defaults retain the constructor's calling environment", {
+  Formula := new_class(properties = list(value = class_formula))
+  expect_identical(
+    formals(Formula)$value,
+    quote(stats::formula(NULL))
+  )
+
+  first <- Formula()@value
+  second <- Formula()@value
+  expect_s3_class(first, "formula")
+  expect_length(first, 0L)
+  expect_identical(parent.env(environment(first)), environment(Formula))
+  expect_identical(get("value", environment(first)), first)
+  expect_identical(identical(environment(first), environment(second)), FALSE)
+})
+
+test_that("abstract S3 property defaults still require an explicit value", {
+  Abstract := new_class(properties = list(value = class_POSIXt))
+  expect_snapshot(error = TRUE, Abstract())
+  value <- Sys.time()
+  expect_identical(Abstract(value = value)@value, value)
+})
+
+test_that("custom same-name S3 defaults retain their closure and captured state", {
+  calls <- 0L
+  custom <- new_S3_class(
+    "data.frame",
+    constructor = local({
+      secret <- 40L
+      function(.data = list()) {
+        calls <<- calls + 1L
+        list2DF(c(.data, list(x = secret + calls)))
+      }
+    })
+  )
+  Survey := new_class(properties = list(survey = custom))
+  expect_identical(calls, 0L)
+  expect_identical(formals(Survey)$survey[[1L]], custom$constructor)
+  expect_identical(Survey()@survey, data.frame(x = 41L))
+  expect_identical(Survey()@survey, data.frame(x = 42L))
+  expect_identical(calls, 2L)
+})
+
 # S4 ----------------------------------------------------------------------
 
 test_that("can work with S4 classes", {
-  on.exit(S4_remove_classes(c("Foo1", "Foo2", "Foo3", "Foo4")))
-
-  methods::setClass("Foo1", contains = "character")
-  methods::setClass("Foo2", contains = "Foo1")
-  methods::setClass("Foo3", slots = list(x = "numeric"))
-  methods::setClass("Foo4", contains = c("Foo2", "Foo3"))
+  local_S4_classes()
+  setClass("Foo1", contains = "character")
+  setClass("Foo2", contains = "Foo1")
+  setClass("Foo3", slots = list(x = "numeric"))
+  setClass("Foo4", contains = c("Foo2", "Foo3"))
 
   klass <- methods::getClass("Foo4")
 
   expect_equal(class_type(klass), "S4")
-  expect_equal(class_dispatch(klass), c("S4/S7::Foo4", "S4/S7::Foo2", "S4/S7::Foo3", "S4/S7::Foo1", "character"))
+  expect_equal(
+    class_dispatch(klass),
+    c("S4/S7::Foo4", "S4/S7::Foo2", "S4/S7::Foo3", "S4/S7::Foo1", "character")
+  )
   expect_equal(class_register(klass), "S4/S7::Foo4")
   expect_s4_class(class_construct(klass, 1, x = 2), "Foo4")
   expect_equal(class_desc(klass), "S4<Foo4>")
@@ -184,6 +354,70 @@ test_that("can work with S4 classes", {
   expect_equal(obj_desc(obj), "S4<Foo4>")
   expect_equal(obj_dispatch(obj), class_dispatch(klass))
   expect_equal(class_inherits(obj, klass), TRUE)
+})
+
+# external ----------------------------------------------------------------
+
+test_that("can work with external classes", {
+  dep := local_package({
+    Ext := new_class(properties = list(x = class_integer))
+  })
+  Ext := new_external_class(package = "dep")
+  expect_equal(as_class(Ext), Ext)
+
+  expect_equal(class_type(Ext), "S7_external")
+  expect_equal(class_dispatch(Ext), c("dep::Ext", "S7_object"))
+  expect_equal(class_register(Ext), "dep::Ext")
+  expect_s3_class(class_construct(Ext, x = 1L), "dep::Ext")
+  expect_equal(class_desc(Ext), "<dep::Ext>")
+  expect_equal(class_deparse(Ext), 'new_external_class("dep", "Ext")')
+
+  obj <- dep$Ext(x = 1L)
+  expect_equal(obj_type(obj), "S7")
+  expect_equal(obj_desc(obj), "<dep::Ext>")
+  expect_equal(obj_dispatch(obj), c("dep::Ext", "S7_object"))
+  expect_equal(class_inherits(obj, Ext), TRUE)
+})
+
+test_that("property defaults defer external class lookup until construction", {
+  Ext := new_external_class("pkg")
+  Holder := new_class(properties = list(x = Ext, y = Ext | NULL))
+  expect_equal(formals(Holder)$x, quote(S7::as_class(pkg::Ext)()))
+  expect_equal(formals(Holder)$y, quote(S7::as_class(pkg::Ext)()))
+
+  Local := new_class(
+    package = "pkg",
+    properties = list(x = Ext, y = Ext | NULL)
+  )
+  expect_equal(formals(Local)$x, quote(S7::as_class(Ext)()))
+  expect_equal(formals(Local)$y, quote(S7::as_class(Ext)()))
+})
+
+
+test_that("class_deparse() includes external class version", {
+  klass := new_external_class("pkg", version = "1.0")
+  expect_equal(
+    class_deparse(klass),
+    'new_external_class("pkg", "klass", version = "1.0")'
+  )
+})
+
+test_that("S7_class_desc() formats every supported class spec", {
+  Foo := new_class(package = NULL)
+
+  expect_equal(S7_class_desc(Foo), "<Foo>")
+  expect_equal(S7_class_desc(class_integer), "<integer>")
+  expect_equal(S7_class_desc(new_S3_class("data.frame")), "S3<data.frame>")
+  expect_equal(
+    S7_class_desc(class_integer | class_double),
+    "<integer> or <double>"
+  )
+  expect_equal(S7_class_desc(NULL), "<NULL>")
+  expect_equal(S7_class_desc(class_missing), "<MISSING>")
+  expect_equal(S7_class_desc(class_any), "<ANY>")
+
+  # non-class object errors via as_class()
+  expect_snapshot(S7_class_desc(1L), error = TRUE)
 })
 
 # input validation -------------------------------------------------------------

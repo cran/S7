@@ -8,7 +8,7 @@ knitr::opts_chunk$set(
 library(S7)
 
 ## -----------------------------------------------------------------------------
-Range <- new_class("Range",
+Range := new_class(
   properties = list(
     start = class_double,
     end = class_double
@@ -68,7 +68,7 @@ shift <- function(x, shift) {
 shift(Range(1, 10), 10)
 
 ## -----------------------------------------------------------------------------
-Range <- new_class("Range",
+Range := new_class(
   properties = list(
     start = new_property(class_double),
     end = new_property(class_double)
@@ -84,7 +84,7 @@ prop_number <- new_property(
   }
 )
 
-Range <- new_class("Range",
+Range := new_class(
   properties = list(
     start = prop_number,
     end = prop_number
@@ -105,7 +105,7 @@ Range(end = c(1.5, 3.5))
 })
 
 ## -----------------------------------------------------------------------------
-Empty <- new_class("Empty",
+Empty := new_class(
   properties = list(
     x = class_double,
     y = class_character,
@@ -114,7 +114,7 @@ Empty <- new_class("Empty",
 Empty()
 
 ## -----------------------------------------------------------------------------
-Empty <- new_class("Empty",
+Empty := new_class(
   properties = list(
     x = new_property(class_numeric, default = 0),
     y = new_property(class_character, default = ""),
@@ -124,7 +124,7 @@ Empty <- new_class("Empty",
 Empty()
 
 ## -----------------------------------------------------------------------------
-Stopwatch <- new_class("Stopwatch", properties = list(
+Stopwatch := new_class(properties = list(
   start_time = new_property(
     class = class_POSIXct,
     default = quote(Sys.time())
@@ -140,7 +140,7 @@ round(Stopwatch()@elapsed)
 round(Stopwatch(Sys.time() - 1)@elapsed)
 
 ## -----------------------------------------------------------------------------
-Range <- new_class("Range",
+Range := new_class(
   properties = list(
     start = class_double,
     end = class_double,
@@ -159,7 +159,7 @@ x@length <- 20
 })
 
 ## -----------------------------------------------------------------------------
-Range <- new_class("Range",
+Range := new_class(
   properties = list(
     start = class_double,
     end = class_double,
@@ -186,24 +186,9 @@ x@length <- 5
 x
 
 ## -----------------------------------------------------------------------------
-Person <- new_class("Person", properties = list(
- first_name = class_character,
- firstName = new_property(
-    class_character,
-    default = quote(first_name),
-    getter = function(self) {
-      warning("@firstName is deprecated; please use @first_name instead", call. = FALSE)
-      self@first_name
-    },
-    setter = function(self, value) {
-      if (identical(value, self@first_name)) {
-        return(self)
-      }
-      warning("@firstName is deprecated; please use @first_name instead", call. = FALSE)
-      self@first_name <- value
-      self
-    }
-  )
+Person := new_class(properties = list(
+  first_name = class_character,
+  deprecated_property("firstName", new = "first_name", when = "1.1.0")
 ))
 
 args(Person)
@@ -219,7 +204,7 @@ hadley@firstName <- "John"
 hadley@first_name  # no warning
 
 ## -----------------------------------------------------------------------------
-Person <- new_class("Person", properties = list(
+Person := new_class(properties = list(
  name = new_property(
    class_character,
    validator = function(value) {
@@ -236,7 +221,7 @@ try(Person(1)) # class_character$validator() is also checked.
 Person("Alice")
 
 ## -----------------------------------------------------------------------------
-Person <- new_class("Person", properties = list(
+Person := new_class(properties = list(
  name = new_property(
    class_character,
    default = quote(stop("@name is required")))
@@ -247,7 +232,7 @@ try(Person())
 Person("Alice")
 
 ## -----------------------------------------------------------------------------
-Person <- new_class("Person", properties = list(
+Person := new_class(properties = list(
  birth_date = new_property(
    class_Date,
    setter = function(self, value) {
@@ -267,7 +252,7 @@ try(person@birth_date <- "2000-01-01")
 Range@constructor
 
 ## -----------------------------------------------------------------------------
-Range <- new_class("Range",
+Range := new_class(
   properties = list(
     start = class_numeric,
     end = class_numeric
@@ -280,4 +265,12 @@ Range <- new_class("Range",
 )
 
 Range(c(10, 5, 0, 2, 5, 7))
+
+## -----------------------------------------------------------------------------
+PositiveRange := new_class(
+  parent = Range,
+  properties = list(positive = class_logical)
+)
+# `...` is forwarded to Range()'s custom constructor
+PositiveRange(c(10, 5, 0, 2, 5, 7), positive = TRUE)
 

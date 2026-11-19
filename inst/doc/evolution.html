@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Evolving S7 classes and generics</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Evolving S7 classes and generics</h1>
+
+
+
+<!--
+The failures described in this vignette can be verified with `tools/evolution/`: a small harness that builds real package pairs and observes what breaks. Use it to reverify results when the package changes.
+-->
+<p>Sooner or later every successful package needs to change its
+interface: a generic gains an argument, a property turns out to be
+misnamed, or a class needs to be split in two. When other packages
+depend on yours, these changes are no longer private decisions, and you
+need to think through how your changes affect dependencies. This
+vignette works through the ways an S7 interface can change and the
+consequences for downstream packages.</p>
+<p>Throughout this vignette, we’ll imagine two packages:</p>
+<ul>
+<li><strong>yourPackage</strong> is <em>upstream</em>: it defines S7
+classes and generics. You’re the author of yourPackage.</li>
+<li><strong>depPackage</strong> is <em>downstream</em>: it depends on
+yourPackage, using its generics (by calling them or registering methods)
+and its classes (by subclassing them or creating instances). Someone
+else is the author of depPackage.</li>
+</ul>
+<p>This vignette addresses the case where both packages are on CRAN.
+Releasing two CRAN packages at the same time is painful and best
+avoided, so every breaking change needs a path where depPackage can
+release a version that works with both old and new yourPackage. In
+practice, you may have many dependencies; depPackage stands in for any
+one of them.</p>
+<p>This vignette shows you how to use the tools that S7 provides, and
+describes the changes that can’t be made without breaking
+depPackage.</p>
+<p>The vignette is divided into changes to generics and changes to
+classes. Each starts by explaining when things break, then goes into the
+details of each possible change and how to make it with the least
+disruption to depPackage. We finish with some practices that make your
+package easier to evolve, and a table summarising every change.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(S7)</span></code></pre></div>
+<div id="changing-a-generic" class="section level2">
+<h2>Changing a generic</h2>
+<p>Most changes to a generic cause problems with method registration.
+depPackage’s <code>method&lt;-</code> calls run when depPackage is
+installed, and the registrations are replayed each time it’s loaded.
+Failures at either install- or load-time are problematic, because they
+make it impossible to create a version of depPackage that works with
+both versions of yourPackage.</p>
+<p>For this reason, S7 only checks method compatibility in
+development:</p>
+<ul>
+<li>when you’ve loaded the package with
+<code>devtools::load_all()</code>,</li>
+<li>when you’re running <code>R CMD check</code> on the package that
+owns the method, the generic, or one of the classes, or</li>
+<li>when you’re working outside a package (e.g. interactively, in a
+script, or in a vignette).</li>
+</ul>
+<p>In development, S7 checks that:</p>
+<ul>
+<li>The method has the same dispatch arguments as the generic.</li>
+<li>If the generic lacks <code>...</code>, the method’s formals match
+the generic’s, except that defaults for dispatch arguments belong only
+in the generic.</li>
+<li>The method has all the non-dispatch arguments that the generic
+has.</li>
+<li>The method’s default values match the generic’s.</li>
+</ul>
+<p>The first two are errors (or warnings under <code>load_all()</code>,
+so you can see them all at once), which fail <code>R CMD check</code> of
+depPackage. The last two are warnings, which show up as a single
+NOTE.</p>
+<p>Users skip these checks entirely: an incompatible method still
+installs and loads, and any problem only shows up when the method is
+called. This gives the depPackage developer the ability to create a
+version that works with both old and new yourPackage. So in the sections
+below, a change that “breaks methods” means that depPackage fails
+<code>R CMD check</code>, and its methods error or misbehave when users
+call them.</p>
+<p>The following sections cover each way a generic can change:</p>
+<ul>
+<li><a href="#changing-dispatch">Changing dispatch</a></li>
+<li><a href="#adding-an-argument">Adding an argument</a></li>
+<li><a href="#removing-an-argument">Removing an argument</a></li>
+<li><a href="#changing-a-default">Changing a default</a></li>
+<li><a href="#renaming-a-generic">Renaming a generic</a></li>
+<li><a href="#removing-a-generic">Removing a generic</a></li>
+<li><a href="#moving-a-generic-to-another-package">Moving a generic to
+another package</a></li>
+</ul>
+<div id="changing-dispatch" class="section level3">
+<h3>Changing dispatch</h3>
+<!-- tools/evolution/logs: gen-change-dispatch -->
+<p>Changing a generic’s dispatch arguments (i.e. their number, names, or
+order) breaks every method in depPackage: no method can match both the
+old and new dispatch arguments. There is no workaround: a generic’s
+dispatch arguments are its identity. So if you change dispatch, you are
+creating a new generic, and that means you should be explicit about it:
+create a new generic with a new name and deprecate the old one. We
+recommend avoiding this if at all possible, but if you have to, here’s
+the process:</p>
+<ol style="list-style-type: decimal">
+<li>You create a new generic, with a new name and the new dispatch
+arguments.</li>
+<li>You deprecate the old generic with
+<code>deprecated_generic()</code>, and release.</li>
+<li>Each dependency registers its methods on the new generic, and
+releases whenever convenient.</li>
+<li>You remove the old generic in a later release.</li>
+</ol>
+</div>
+<div id="adding-an-argument" class="section level3">
+<h3>Adding an argument</h3>
+<!-- tools/evolution/logs: gen-add-arg -->
+<p>If your generic has <code>...</code>, adding a non-dispatch argument
+is one of the mildest changes you can make. Existing methods keep
+working, but every registration produces a warning until they’re
+updated:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># yourPackage, version 1</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># depPackage&#39;s method, written against version 1</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>BClass <span class="sc">:=</span> <span class="fu">new_class</span>()</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) <span class="st">&quot;old&quot;</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co"># yourPackage, version 2 adds `verbose`</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="at">fun =</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> <span class="cn">FALSE</span>, ...) <span class="fu">S7_dispatch</span>())</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) <span class="st">&quot;old&quot;</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; Warning: gen(&lt;BClass&gt;) doesn&#39;t have argument `verbose`</span></span></code></pre></div>
+<p>depPackage’s users see nothing, but the warning surfaces under
+<code>load_all()</code> and as a single NOTE in <code>R CMD check</code>
+of depPackage. The fix is pleasingly asymmetric: because methods may
+have arguments the generic lacks, depPackage can add the argument
+<strong>before</strong> yourPackage releases:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># yourPackage, version 1 again</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># depPackage adds `verbose` ahead of yourPackage&#39;s release: no warning under version 1...</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> <span class="cn">FALSE</span>, ...) <span class="st">&quot;new&quot;</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># ...and none under version 2 either</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="at">fun =</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> <span class="cn">FALSE</span>, ...) <span class="fu">S7_dispatch</span>())</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> <span class="cn">FALSE</span>, ...) <span class="st">&quot;new&quot;</span></span></code></pre></div>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You tell dependency authors about the upcoming argument (or send
+PRs).</li>
+<li>Each dependency adds the argument to its methods, and can release
+whenever convenient.</li>
+<li>You release.</li>
+</ol>
+<p>If your generic doesn’t have <code>...</code>, adding an argument is
+an error for every downstream method, and there is no version of the
+method that satisfies both the old and the new generic. Either way,
+there is no fix on depPackage’s side, so a generic without
+<code>...</code> is a frozen interface: only add one deliberately, and
+treat any change to it like a rename.</p>
+</div>
+<div id="removing-an-argument" class="section level3">
+<h3>Removing an argument</h3>
+<!-- tools/evolution/logs: gen-remove-arg -->
+<p>Removing a non-dispatch argument is similarly mild. Methods may have
+extra arguments, so a method that still lists the removed argument
+registers without complaint against both versions. depPackage can remove
+the argument from its methods at leisure.</p>
+<p>Callers are the bigger concern: <code>gen(x, removed_arg = 1)</code>
+will still be accepted by the generic (via <code>...</code>) and will
+reach methods that may or may not expect it. So before removing an
+argument, deprecate it: keep it in the generic, and warn when it’s
+supplied:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="at">fun =</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> <span class="cn">FALSE</span>, ...) {</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">missing</span>(verbose)) {</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>    <span class="fu">.Deprecated</span>(<span class="at">msg =</span> <span class="st">&quot;The `verbose` argument is deprecated and will be removed in a future release.&quot;</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  }</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="fu">S7_dispatch</span>()</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>})</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> <span class="cn">FALSE</span>, ...) <span class="st">&quot;result&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>. <span class="ot">&lt;-</span> <span class="fu">gen</span>(<span class="fu">BClass</span>(), <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; Warning in gen(BClass(), verbose = TRUE): The `verbose` argument is deprecated</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; and will be removed in a future release.</span></span></code></pre></div>
+<p>If you use lifecycle, the equivalent is:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="at">fun =</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> lifecycle<span class="sc">::</span><span class="fu">deprecated</span>(), ...) {</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="cf">if</span> (lifecycle<span class="sc">::</span><span class="fu">is_present</span>(verbose)) {</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>    lifecycle<span class="sc">::</span><span class="fu">deprecate_warn</span>(<span class="st">&quot;1.0.0&quot;</span>, <span class="st">&quot;gen(verbose)&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  }</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="fu">S7_dispatch</span>()</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>})</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">verbose =</span> lifecycle<span class="sc">::</span><span class="fu">deprecated</span>(), ...) <span class="st">&quot;result&quot;</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>. <span class="ot">&lt;-</span> <span class="fu">gen</span>(<span class="fu">BClass</span>(), <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; Warning: The `verbose` argument of `gen()` is deprecated as of &lt;NA&gt; 1.0.0.</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; This warning is displayed once per session.</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; generated.</span></span></code></pre></div>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You deprecate the argument in the generic, and release.</li>
+<li>Each dependency stops supplying the argument (and can remove it from
+its methods), and releases whenever convenient.</li>
+<li>You remove the argument in a later release.</li>
+</ol>
+</div>
+<div id="changing-a-default" class="section level3">
+<h3>Changing a default</h3>
+<!-- tools/evolution/logs: gen-change-default -->
+<p>Changing a default changes behavior for every caller, because S7
+dispatch never uses the defaults provided by the method. For this reason
+S7 warns whenever the generic and method drift out of sync:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="at">fun =</span> <span class="cf">function</span>(x, <span class="at">drop =</span> <span class="cn">TRUE</span>, ...) <span class="fu">S7_dispatch</span>())</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">drop =</span> <span class="cn">FALSE</span>, ...) drop</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Warning: In gen(&lt;BClass&gt;), default value of `drop` is not the same as the generic</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; - Generic: TRUE</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; - Method:  FALSE</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="fu">gen</span>(<span class="fu">BClass</span>())</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>There’s no way around this warning, as there’s no spelling of the
+method that agrees with both versions of yourPackage. Fortunately, as
+with adding an argument, this only costs depPackage one check NOTE. Our
+advice is to keep non-dispatch arguments to a minimum, and change
+defaults rarely, if ever.</p>
+<p>If you must, the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You tell dependency authors about the upcoming change.</li>
+<li>You release.</li>
+<li>Each dependency updates the default in its methods, and releases
+whenever convenient.</li>
+</ol>
+</div>
+<div id="renaming-a-generic" class="section level3">
+<h3>Renaming a generic</h3>
+<!-- tools/evolution/logs: gen-rename -->
+<p>If you simply rename a generic, depPackage will fail to install if it
+uses <code>importFrom(yourPackage, gen)</code>. The fix is to keep the
+old name as a deprecated alias for the new generic:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># yourPackage, version 1</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>gen1 <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co"># yourPackage, version 2</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>gen2 <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>gen1 <span class="sc">:=</span> <span class="fu">deprecated_generic</span>(<span class="at">new =</span> gen2, <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span>)</span></code></pre></div>
+<p><code>deprecated_generic()</code> returns an object that still counts
+as the generic, so method registration continues to work without
+warning, but calls through the old name warn that it’s time to move
+on.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">method</span>(gen1, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) <span class="st">&quot;result&quot;</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">gen2</span>(<span class="fu">BClass</span>())</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;result&quot;</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="fu">gen1</span>(<span class="fu">BClass</span>())</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; Warning in gen1(BClass()): `gen1()` was deprecated in version 2.0.0.</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Please use `gen2()` instead.</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;result&quot;</span></span></code></pre></div>
+<p>By default, <code>deprecated_generic()</code> generates a base
+warning, but you can choose to use lifecycle instead:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>gen1 <span class="sc">:=</span> <span class="fu">deprecated_generic</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">new =</span> gen2, </span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span>, </span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;lifecycle(warn)&quot;</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="fu">method</span>(gen1, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) <span class="st">&quot;result&quot;</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="fu">gen1</span>(<span class="fu">BClass</span>())</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; Warning: `gen1()` was deprecated in &lt;NA&gt; 2.0.0.</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; ℹ Please use `gen2()` instead.</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; This warning is displayed once per session.</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; generated.</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;result&quot;</span></span></code></pre></div>
+<p>You can later remove <code>gen1</code> once dependencies have had
+time to move on.</p>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You create the new generic, turn the old one into a deprecated alias
+with <code>deprecated_generic(new = )</code>, and release.</li>
+<li>Each dependency switches to the new name, and releases whenever
+convenient.</li>
+<li>You remove the old name in a later release.</li>
+</ol>
+</div>
+<div id="removing-a-generic" class="section level3">
+<h3>Removing a generic</h3>
+<!-- tools/evolution/logs: gen-remove -->
+<p>To retire a generic without replacement, use
+<code>deprecated_generic()</code> without the <code>new</code>
+argument:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># yourPackage, version 1</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co"># yourPackage, version 2</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">deprecated_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="fu">method</span>(gen, BClass) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) <span class="st">&quot;result&quot;</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="fu">gen</span>(<span class="fu">BClass</span>())</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; Warning in gen(BClass()): `gen()` was deprecated in version 2.0.0.</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;result&quot;</span></span></code></pre></div>
+<p>Existing method registration will continue to work without warning,
+but calls to the generic warn, giving dependencies time to move away
+from the generic before you remove it in a future release.</p>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You replace the generic with <code>deprecated_generic()</code>, and
+release.</li>
+<li>Each dependency stops using the generic, and releases whenever
+convenient.</li>
+<li>You remove the generic in a later release.</li>
+</ol>
+</div>
+<div id="moving-a-generic-to-another-package" class="section level3">
+<h3>Moving a generic to another package</h3>
+<!-- tools/evolution/logs: gen-move-package -->
+<p>Splitting generics out into a lower-dependency package (say
+yourPackageCore) works, as long as yourPackage re-exports them:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># yourPackage, version 2</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&#39; @importFrom yourPackageCore gen</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&#39; @export</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>yourPackageCore<span class="sc">::</span>gen</span></code></pre></div>
+<p>depPackage’s <code>importFrom(yourPackage, gen)</code> still
+resolves, and method registration follows the generic object to its new
+home package automatically.</p>
+<p>You must re-export using the <code>NAMESPACE</code>, not
+assignment:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># DO NOT DO THIS</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&#39; @export</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>gen <span class="ot">&lt;-</span> yourPackageCore<span class="sc">::</span>gen</span></code></pre></div>
+<p>This captures a copy of the generic when yourPackage is installed.
+The result is a split brain: depPackage’s registrations follow the
+generic’s home package and land on yourPackageCore’s original, while
+calls through <code>yourPackage::gen()</code> dispatch using the
+duplicate’s empty table and fail.</p>
+<p>Should the re-export signal deprecation? Since a re-export costs
+nothing to maintain, keeping it forever is a fine choice. If you do want
+to retire the old home, export a deprecated alias:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># In yourPackage, version 2</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>gen <span class="sc">:=</span> <span class="fu">deprecated_generic</span>(<span class="at">new =</span> yourPackageCore<span class="sc">::</span>gen, <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span>)</span></code></pre></div>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You release yourPackageCore with the generic.</li>
+<li>You re-export the generic from yourPackage via
+<code>NAMESPACE</code>, and release.</li>
+<li>Optionally, you later replace the re-export with a deprecated alias,
+each dependency switches to yourPackageCore, and you eventually remove
+the alias.</li>
+</ol>
+</div>
+</div>
+<div id="changing-a-class" class="section level2">
+<h2>Changing a class</h2>
+<p>Classes can evolve without breaking their subclasses in other
+packages because S7 never inlines a parent constructor across package
+boundaries. To see why this matters, compare the two cases. When classes
+live in the same package, the subclass’s constructor inlines the
+parent’s arguments, so you can see every property it takes:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>class1 <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">package =</span> <span class="st">&quot;foo&quot;</span>, <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">a =</span> class_any))</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>class2 <span class="sc">:=</span> <span class="fu">new_class</span>(class1, <span class="at">package =</span> <span class="st">&quot;foo&quot;</span>, <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">b =</span> class_any))</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>class2<span class="sc">@</span>constructor</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; function (a = NULL, b = NULL) </span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; S7::new_object(class1(a = a), b = b)</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; &lt;environment: 0x7c42404740&gt;</span></span></code></pre></div>
+<p>Things are different when the parent lives in another package:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>class2 <span class="sc">:=</span> <span class="fu">new_class</span>(foo<span class="sc">::</span>class1, <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">b =</span> class_any))</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>class2<span class="sc">@</span>constructor</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="co">#&gt; function (..., b = NULL) </span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; S7::new_object(S7::as_class(foo::class1)(...), b = b)</span></span></code></pre></div>
+<p>Now the constructor of <code>class2</code> can’t inline the parent’s
+arguments, because the parent’s properties (and hence its constructor)
+might change in a future version. Instead, it takes <code>...</code> and
+passes them on to <code>foo::class1()</code> at run time, followed by
+its own property, <code>b</code>. This is the key idea that allows
+classes to evolve over time without immediately breaking their
+dependencies.</p>
+<p>The following sections cover each way a class can change:</p>
+<ul>
+<li><a href="#adding-a-property">Adding a property</a></li>
+<li><a href="#removing-a-property">Removing a property</a></li>
+<li><a href="#renaming-a-property">Renaming a property</a></li>
+<li><a href="#changing-a-propertys-type-or-validator">Changing a
+property’s type or validator</a></li>
+<li><a href="#renaming-a-class">Renaming a class</a></li>
+<li><a href="#removing-a-class">Removing a class</a></li>
+<li><a href="#moving-a-class">Moving a class</a></li>
+</ul>
+<div id="adding-a-property" class="section level3">
+<h3>Adding a property</h3>
+<!-- tools/evolution/logs: class-add-prop -->
+<p>Adding a property is usually harmless, but there are two ways it can
+still bite:</p>
+<ul>
+<li><p><strong>Name clash.</strong> If depPackage has a subclass and
+that subclass uses a property with the same name, depPackage will fail
+to install:</p>
+<pre><code>Error: &lt;MyFoo&gt;@y must narrow &lt;yourPackage::Foo&gt;@y.</code></pre>
+<p>The easiest resolution to this problem is for you to pick a different
+name. If that doesn’t work, you’ll need to ask the depPackage maintainer
+to rename their property using the process described below.</p></li>
+<li><p><strong>Positional construction.</strong>
+<code>yourPackage::Foo(1, 2)</code> changes meaning if a property is
+inserted before an existing one. In general, it’s best to add new
+properties at the end so positional calls keep their meaning, but
+inserting is usually OK because most callers use named
+arguments.</p></li>
+</ul>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You check whether any dependency has a subclass with a property of
+the same name.</li>
+<li>If so, you pick a different name (or ask the dependency to rename
+its property first).</li>
+<li>You release.</li>
+</ol>
+</div>
+<div id="removing-a-property" class="section level3">
+<h3>Removing a property</h3>
+<!-- tools/evolution/logs: class-remove-prop -->
+<p>Removing a property will cause run-time errors:
+<code>Foo(count = 2)</code> will fail with <code>unused argument</code>
+and <code>x@count</code> with <code>Property not found</code>. To give
+dependencies time to adapt, deprecate the property with
+<code>deprecated_property()</code>:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># yourPackage, version 1</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>validate_count <span class="ot">&lt;-</span> <span class="cf">function</span>(value) {</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">any</span>(value <span class="sc">&lt;</span> <span class="dv">0</span>)) <span class="st">&quot;must be non-negative&quot;</span></span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>}</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>  <span class="at">count =</span> <span class="fu">new_property</span>(class_double, <span class="at">default =</span> <span class="dv">1</span>, <span class="at">validator =</span> validate_count)</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>))</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="co"># yourPackage, version 2</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>  <span class="fu">deprecated_property</span>(</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>    <span class="st">&quot;count&quot;</span>, <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span>, <span class="at">class =</span> class_double, <span class="at">default =</span> <span class="dv">1</span>,</span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>    <span class="at">validator =</span> validate_count</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a>  )</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a>))</span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a></span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">Foo</span>(<span class="at">count =</span> <span class="dv">3</span>)</span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a>foo<span class="sc">@</span>count</span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a><span class="co">#&gt; Warning: `&lt;Foo&gt;@count` was deprecated in version 2.0.0.</span></span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a><span class="co">#&gt; [1] 3</span></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a>foo<span class="sc">@</span>count <span class="ot">&lt;-</span> <span class="dv">4</span></span>
+<span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a><span class="co">#&gt; Warning: `&lt;Foo&gt;@count` was deprecated in version 2.0.0.</span></span>
+<span id="cb17-23"><a href="#cb17-23" tabindex="-1"></a><span class="fu">print</span>(foo)</span>
+<span id="cb17-24"><a href="#cb17-24" tabindex="-1"></a><span class="co">#&gt; &lt;Foo&gt;</span></span></code></pre></div>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You replace the property with <code>deprecated_property()</code>,
+and release.</li>
+<li>Each dependency stops using the property, and releases whenever
+convenient.</li>
+<li>You remove the property in a later release.</li>
+</ol>
+</div>
+<div id="renaming-a-property" class="section level3">
+<h3>Renaming a property</h3>
+<!-- tools/evolution/logs: class-rename-prop -->
+<p>A rename is just an add and a remove, supplying the name of the
+<code>new</code> property to <code>deprecated_property()</code>:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  <span class="at">size =</span> <span class="fu">new_property</span>(class_double, <span class="at">default =</span> <span class="dv">1</span>),</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>  <span class="fu">deprecated_property</span>(<span class="st">&quot;count&quot;</span>, <span class="at">new =</span> <span class="st">&quot;size&quot;</span>, <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>))</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">Foo</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="co"># silent</span></span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">Foo</span>(<span class="at">count =</span> <span class="dv">3</span>) <span class="co"># warns, then sets size</span></span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a><span class="co">#&gt; Warning: `&lt;Foo&gt;@count` was deprecated in version 2.0.0.</span></span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="co">#&gt; Please use `&lt;Foo&gt;@size` instead.</span></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>foo<span class="sc">@</span>count</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a><span class="co">#&gt; Warning: `&lt;Foo&gt;@count` was deprecated in version 2.0.0.</span></span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="co">#&gt; Please use `&lt;Foo&gt;@size` instead.</span></span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a><span class="co">#&gt; [1] 3</span></span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>foo<span class="sc">@</span>count <span class="ot">&lt;-</span> <span class="dv">4</span></span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a><span class="co">#&gt; Warning: `&lt;Foo&gt;@count` was deprecated in version 2.0.0.</span></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a><span class="co">#&gt; Please use `&lt;Foo&gt;@size` instead.</span></span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a>foo<span class="sc">@</span>size</span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="co">#&gt; [1] 4</span></span></code></pre></div>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You add the new property, replace the old one with
+<code>deprecated_property(new = )</code>, and release.</li>
+<li>Each dependency switches to the new name, and releases whenever
+convenient.</li>
+<li>You remove the old property in a later release.</li>
+</ol>
+</div>
+<div id="changing-a-propertys-type-or-validator" class="section level3">
+<h3>Changing a property’s type or validator</h3>
+<!-- tools/evolution/logs: class-change-prop-type -->
+<p>Widening a property’s type (say, <code>class_integer</code> to
+<code>class_numeric</code>) is safe for depPackage: everything that
+validated before still validates. Narrowing causes run-time errors: any
+code that stored a now-invalid value fails when it runs:</p>
+<pre><code>Error: &lt;yourPackage::Foo&gt; object properties are invalid:
+- @size must be &lt;integer&gt;, not &lt;double&gt;</code></pre>
+<p>The same applies to tightening a validator. There’s no automatic fix
+here, but you can give dependencies a deprecation period by generating a
+warning in the validator:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># yourPackage, version 1</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(<span class="at">size =</span> class_double))</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a><span class="co"># yourPackage, version 2: warn instead of failing</span></span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">new_class</span>(</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>  <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">size =</span> class_double),</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>  <span class="at">validator =</span> <span class="cf">function</span>(self) {</span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>    <span class="cf">if</span> (self<span class="sc">@</span>size <span class="sc">!=</span> <span class="fu">trunc</span>(self<span class="sc">@</span>size)) {</span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>      <span class="fu">warning</span>(<span class="st">&quot;`size` should be a whole number; this will become an error in a future release.&quot;</span>)</span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a>    }</span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a>    <span class="cn">NULL</span></span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a>  }</span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a>)</span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">Foo</span>(<span class="at">size =</span> <span class="fl">3.5</span>)</span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt; Warning in validator(object): `size` should be a whole number; this will become</span></span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt; an error in a future release.</span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a>foo</span>
+<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a><span class="co">#&gt; &lt;Foo&gt;</span></span>
+<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co">#&gt;  @ size: num 3.5</span></span></code></pre></div>
+<p>If you use lifecycle, <code>lifecycle::deprecate_warn()</code> is a
+good choice here: it rate-limits to one warning every 8 hours, so
+dependencies that construct many objects aren’t flooded.</p>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You make the validator warn about values that will become invalid,
+and release.</li>
+<li>Each dependency fixes the code that triggers the warning, and
+releases whenever convenient.</li>
+<li>You narrow the type or tighten the validator in a later
+release.</li>
+</ol>
+</div>
+<div id="renaming-a-class" class="section level3">
+<h3>Renaming a class</h3>
+<!-- tools/evolution/logs: class-rename -->
+<p>To rename a class, create the new class, then redefine the old one
+with <code>deprecated_class()</code>, passing the replacement to
+<code>new</code> and recording the version in <code>when</code>.</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="co"># yourPackage, version 1</span></span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(<span class="at">size =</span> class_double))</span>
+<span id="cb21-3"><a href="#cb21-3" tabindex="-1"></a>saved <span class="ot">&lt;-</span> <span class="fu">Foo</span>(<span class="at">size =</span> <span class="dv">1</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" tabindex="-1"></a>MyFoo <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">parent =</span> Foo)</span>
+<span id="cb21-5"><a href="#cb21-5" tabindex="-1"></a>measure <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb21-6"><a href="#cb21-6" tabindex="-1"></a><span class="fu">method</span>(measure, Foo) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) x<span class="sc">@</span>size</span>
+<span id="cb21-7"><a href="#cb21-7" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" tabindex="-1"></a><span class="co"># yourPackage, version 2: export both classes</span></span>
+<span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a>Bar <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(<span class="at">size =</span> class_double))</span>
+<span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">deprecated_class</span>(</span>
+<span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a>  <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">size =</span> class_double),</span>
+<span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a>  <span class="at">new =</span> Bar,</span>
+<span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a>  <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span></span>
+<span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a>)</span>
+<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">Foo</span>(<span class="at">size =</span> <span class="dv">2</span>) <span class="co"># warns and still constructs a Foo</span></span>
+<span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a><span class="co">#&gt; Warning in Foo(size = 2): `Foo()` was deprecated in version 2.0.0.</span></span>
+<span id="cb21-17"><a href="#cb21-17" tabindex="-1"></a><span class="co">#&gt; Please use `Bar()` instead.</span></span>
+<span id="cb21-18"><a href="#cb21-18" tabindex="-1"></a><span class="fu">measure</span>(foo)</span>
+<span id="cb21-19"><a href="#cb21-19" tabindex="-1"></a><span class="co">#&gt; [1] 2</span></span>
+<span id="cb21-20"><a href="#cb21-20" tabindex="-1"></a><span class="fu">measure</span>(<span class="fu">MyFoo</span>(<span class="at">size =</span> <span class="dv">3</span>)) <span class="co"># existing subclasses still work, without warning</span></span>
+<span id="cb21-21"><a href="#cb21-21" tabindex="-1"></a><span class="co">#&gt; [1] 3</span></span>
+<span id="cb21-22"><a href="#cb21-22" tabindex="-1"></a><span class="fu">measure</span>(saved)</span>
+<span id="cb21-23"><a href="#cb21-23" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span>
+<span id="cb21-24"><a href="#cb21-24" tabindex="-1"></a><span class="fu">S7_inherits</span>(saved, Foo)</span>
+<span id="cb21-25"><a href="#cb21-25" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb21-26"><a href="#cb21-26" tabindex="-1"></a><span class="fu">S7_inherits</span>(saved, Bar)</span>
+<span id="cb21-27"><a href="#cb21-27" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+<p>Methods for <code>Foo</code> do not automatically apply to
+<code>Bar</code>. When a method can handle both classes, register it on
+their union (this replaces the existing <code>Foo</code> method with an
+identical one, hence the message):</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a><span class="fu">method</span>(measure, Foo <span class="sc">|</span> Bar) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) x<span class="sc">@</span>size</span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a><span class="co">#&gt; Overwriting method measure(&lt;Foo&gt;)</span></span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="fu">measure</span>(<span class="fu">Bar</span>(<span class="at">size =</span> <span class="dv">4</span>))</span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a><span class="co">#&gt; [1] 4</span></span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a><span class="fu">measure</span>(saved)</span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
+<p>If the replacement needs a different representation, keep separate
+methods and provide an explicit conversion for users who want it.</p>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You create the new class, replace the old one with
+<code>deprecated_class(new = )</code>, register shared methods on the
+union, and release.</li>
+<li>Each dependency switches to the new class, and releases whenever
+convenient.</li>
+<li>You remove the old class in a later release.</li>
+</ol>
+<div id="aliasing-a-class" class="section level4">
+<h4>Aliasing a class</h4>
+<p>You can instead make the old name an alias for the replacement with
+<code>alias = TRUE</code>:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">deprecated_class</span>(<span class="at">new =</span> Bar, <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span>, <span class="at">alias =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">Foo</span>(<span class="at">size =</span> <span class="dv">2</span>) <span class="co"># warns and constructs a Bar</span></span>
+<span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a><span class="co">#&gt; Warning in Foo(size = 2): `Foo()` was deprecated in version 2.0.0.</span></span>
+<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a><span class="co">#&gt; Please use `Bar()` instead.</span></span>
+<span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a><span class="fu">S7_inherits</span>(foo, Bar)</span>
+<span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb23-7"><a href="#cb23-7" tabindex="-1"></a></span>
+<span id="cb23-8"><a href="#cb23-8" tabindex="-1"></a>describe <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb23-9"><a href="#cb23-9" tabindex="-1"></a><span class="fu">method</span>(describe, Foo) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">paste</span>(<span class="st">&quot;Size:&quot;</span>, x<span class="sc">@</span>size)</span>
+<span id="cb23-10"><a href="#cb23-10" tabindex="-1"></a><span class="fu">describe</span>(<span class="fu">Bar</span>(<span class="at">size =</span> <span class="dv">3</span>))</span>
+<span id="cb23-11"><a href="#cb23-11" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Size: 3&quot;</span></span>
+<span id="cb23-12"><a href="#cb23-12" tabindex="-1"></a></span>
+<span id="cb23-13"><a href="#cb23-13" tabindex="-1"></a>Box <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(<span class="at">item =</span> Foo))</span>
+<span id="cb23-14"><a href="#cb23-14" tabindex="-1"></a><span class="fu">Box</span>(<span class="at">item =</span> <span class="fu">Bar</span>(<span class="at">size =</span> <span class="dv">4</span>))</span>
+<span id="cb23-15"><a href="#cb23-15" tabindex="-1"></a><span class="co">#&gt; &lt;Box&gt;</span></span>
+<span id="cb23-16"><a href="#cb23-16" tabindex="-1"></a><span class="co">#&gt;  @ item: &lt;Bar&gt;</span></span>
+<span id="cb23-17"><a href="#cb23-17" tabindex="-1"></a><span class="co">#&gt;  .. @ size: num 4</span></span></code></pre></div>
+<p>The alias uses <code>Bar</code>’s definition, so you do not repeat
+the properties, parent, constructor, or validator. Both names resolve to
+the same class in method signatures, parents, property types, unions,
+and inheritance checks. Registering or removing a method through either
+name affects the same registration.</p>
+<p>This changes what the old name means; it does not migrate existing
+objects or subclasses, or transfer previously registered methods. For
+example, the saved object created before the rename still has its
+original class:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="fu">S7_inherits</span>(saved, Foo) <span class="co"># FALSE: Foo now refers to Bar</span></span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+<p>Packages that captured the old class in their method signatures,
+subclasses, or property types need to be rebuilt against the alias. Use
+the default behavior above when saved objects and installed subclasses
+must continue to work with the old class during the transition.</p>
+</div>
+</div>
+<div id="removing-a-class" class="section level3">
+<h3>Removing a class</h3>
+<!-- tools/evolution/logs: class-remove -->
+<p>To remove a class without a replacement, redefine it with
+<code>deprecated_class()</code>, keeping its existing properties and
+omitting <code>new</code>:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a>Retired <span class="sc">:=</span> <span class="fu">deprecated_class</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a>  <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">size =</span> class_double),</span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>  <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span></span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a>)</span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a><span class="fu">Retired</span>(<span class="at">size =</span> <span class="dv">3</span>)</span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a><span class="co">#&gt; Warning in Retired(size = 3): `Retired()` was deprecated in version 2.0.0.</span></span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="co">#&gt; &lt;Retired&gt;</span></span>
+<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a><span class="co">#&gt;  @ size: num 3</span></span></code></pre></div>
+<p>Subclasses, method signatures, property types, and unions in
+depPackage can continue using the class, but constructors will warn.</p>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You replace the class with <code>deprecated_class()</code>, and
+release.</li>
+<li>Each dependency stops using the class, and releases whenever
+convenient.</li>
+<li>You remove the class in a later release.</li>
+</ol>
+</div>
+<div id="moving-a-class" class="section level3">
+<h3>Moving a class</h3>
+<!-- tools/evolution/logs: class-move -->
+<p>You can use the same technique as renaming to move a class between
+packages, because changing the class’s <code>package</code> also changes
+its identity. To recommend a class in another package while preserving
+existing uses, use <code>deprecated_class()</code>:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="co"># In yourPackage</span></span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">deprecated_class</span>(</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a>  <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">size =</span> class_double),</span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a>  <span class="at">new =</span> yourPackageCore<span class="sc">::</span>Foo,</span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a>  <span class="at">when =</span> <span class="st">&quot;2.0.0&quot;</span></span>
+<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a>)</span></code></pre></div>
+<p>So the process is:</p>
+<ol style="list-style-type: decimal">
+<li>You release yourPackageCore with the class.</li>
+<li>You replace the class in yourPackage with
+<code>deprecated_class(new = )</code>, and release.</li>
+<li>Each dependency switches to yourPackageCore’s class, and releases
+whenever convenient.</li>
+<li>You remove the old class in a later release.</li>
+</ol>
+</div>
+</div>
+<div id="designing-for-evolution" class="section level2">
+<h2>Designing for evolution</h2>
+<p>Most of the pain described above can be avoided by a few decisions
+made when you first design your interface. Most of these recap advice
+from earlier sections:</p>
+<ul>
+<li><p><strong>Treat names as permanent.</strong> While there are ways
+to “rename” classes and generics, it’s best to think of a rename as
+creating a new class or generic and deprecating the old one. The same
+goes for a generic’s dispatch arguments and a class’s package.</p></li>
+<li><p><strong>Give every generic <code>...</code></strong> (the
+default), so it can gain arguments later (see <a href="#adding-an-argument">Adding an argument</a>).</p></li>
+<li><p><strong>Keep generics as small as possible.</strong> Every
+argument in the generic’s signature (even those that don’t take part in
+dispatch) is part of its contract, and any changes need careful thought.
+If an argument is only meaningful for some methods, leave it out of the
+generic and let those methods take it via <code>...</code>.</p></li>
+<li><p><strong>Call constructors by name</strong>, not position, so
+adding a property never changes the meaning of a call (see <a href="#adding-a-property">Adding a property</a>).</p></li>
+</ul>
+</div>
+<div id="summary" class="section level2">
+<h2>Summary</h2>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Change</th>
+<th>What breaks in depPackage</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Change dispatch arguments</td>
+<td>Every method: check error, calls fail</td>
+<td>Create a new generic and deprecate the old one</td>
+</tr>
+<tr class="even">
+<td>Add an argument (generic has <code>...</code>)</td>
+<td>Check NOTE only</td>
+<td>depPackage adds the argument first, then you release</td>
+</tr>
+<tr class="odd">
+<td>Add an argument (no <code>...</code>)</td>
+<td>Every method: check error, calls fail</td>
+<td>Treat as a rename</td>
+</tr>
+<tr class="even">
+<td>Remove an argument</td>
+<td>Callers that supply it</td>
+<td>Deprecate the argument, then remove</td>
+</tr>
+<tr class="odd">
+<td>Change a default</td>
+<td>Check NOTE only</td>
+<td>Avoid</td>
+</tr>
+<tr class="even">
+<td>Rename a generic</td>
+<td>Install, via <code>importFrom()</code></td>
+<td><code>deprecated_generic(new = )</code></td>
+</tr>
+<tr class="odd">
+<td>Remove a generic</td>
+<td>Install, via <code>importFrom()</code></td>
+<td><code>deprecated_generic()</code></td>
+</tr>
+<tr class="even">
+<td>Move a generic</td>
+<td>Nothing</td>
+<td>Re-export via <code>NAMESPACE</code></td>
+</tr>
+<tr class="odd">
+<td>Add a property</td>
+<td>Install, if a subclass has a clashing property</td>
+<td>Pick a different name</td>
+</tr>
+<tr class="even">
+<td>Remove a property</td>
+<td>Construction and access, at run time</td>
+<td><code>deprecated_property()</code></td>
+</tr>
+<tr class="odd">
+<td>Rename a property</td>
+<td>Construction and access, at run time</td>
+<td><code>deprecated_property(new = )</code></td>
+</tr>
+<tr class="even">
+<td>Narrow a property’s type or validator</td>
+<td>Objects with now-invalid values, at run time</td>
+<td>Warn in the validator first</td>
+</tr>
+<tr class="odd">
+<td>Rename a class</td>
+<td>Nothing immediately</td>
+<td><code>deprecated_class(new = )</code></td>
+</tr>
+<tr class="even">
+<td>Remove a class</td>
+<td>Nothing immediately</td>
+<td><code>deprecated_class()</code></td>
+</tr>
+<tr class="odd">
+<td>Move a class</td>
+<td>Nothing immediately</td>
+<td><code>deprecated_class(new = )</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

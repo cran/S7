@@ -2,8 +2,17 @@
 #'
 #' The base class from which all S7 classes eventually inherit from.
 #'
+#' @section Representation version:
+#' Newly constructed S7 objects carry an internal `_S7_version` attribute.
+#' Classes returned by [new_class()] carry `S7_version`. Both start at `1L`
+#' and track changes to the stored representation independently of the S7
+#' package version, so future backward compatibility code can distinguish
+#' object formats. Objects created before versioning was introduced have no
+#' version attribute and remain supported.
+#'
 #' @keywords internal
 #' @export
+#' @importFrom methods initialize
 #' @return The base S7 object.
 #' @examples
 #'
@@ -22,6 +31,7 @@ S7_object <- new_class(
   }
 )
 methods::setOldClass("S7_object")
+methods::setOldClass(c("S7_class", "S7_object"))
 
 .S7_type <- NULL
 # Defined onLoad because it depends on R version
@@ -42,7 +52,7 @@ is_S7_type <- function(x) {
       deparse1(substitute(x)),
       name
     )
-    stop(msg, call. = FALSE)
+    stop2(msg)
   }
 }
 #' @export
@@ -55,7 +65,7 @@ is_S7_type <- function(x) {
       name,
       deparse1(substitute(value))
     )
-    stop(msg, call. = FALSE)
+    stop2(msg)
   }
 }
 
@@ -81,10 +91,15 @@ is_S7_type <- function(x) {
   NextMethod()
 }
 
-check_subsettable <- function(x, allow_env = FALSE) {
-  allowed_types <- c("list", "language", "pairlist", if (allow_env) "environment")
+check_subsettable <- function(x, allow_env = FALSE, call = sys.call(-1L)) {
+  allowed_types <- c(
+    "list",
+    "language",
+    "pairlist",
+    if (allow_env) "environment"
+  )
   if (!typeof(x) %in% allowed_types) {
-    stop("S7 objects are not subsettable.")
+    stop2("S7 objects are not subsettable.", call = call)
   }
   invisible(TRUE)
 }
@@ -105,9 +120,9 @@ on_load_define_S7_generic <- function() {
     ),
     parent = class_function
   )
+  register_S7_function(S7_generic)
 }
 
-methods::setOldClass(c("S7_generic", "function", "S7_object"))
 is_S7_generic <- function(x) inherits(x, "S7_generic")
 
 
@@ -115,26 +130,90 @@ S7_method <- NULL
 
 on_load_define_S7_method <- function() {
   S7_method <<- new_class(
-    "S7_method",
+    name = "S7_method",
     package = NULL,
     parent = class_function,
     properties = list(generic = S7_generic, signature = class_list)
   )
+  register_S7_function(S7_method)
 }
-methods::setOldClass(c("S7_method", "function", "S7_object"))
+
+register_S7_function <- function(class) {
+  where <- topenv()
+  slots <- lapply(class@properties, S4_property_class, S4_env = where)
+  slots$`_S7_class` <- "ANY"
+  slots$`_S7_version` <- "integer"
+  methods::setClass(
+    class@name,
+    contains = c("function", "S7_object"),
+    slots = slots,
+    prototype = methods::prototype(
+      `_S7_class` = S7_class_storage(class),
+      `_S7_version` = S7_object_version
+    ),
+    where = where
+  )
+  methods::setOldClass(
+    class_dispatch(class),
+    S4Class = class@name,
+    where = where
+  )
+  if (getRversion() < "4.7.0") {
+    make_traceable(class@name)
+  }
+}
+
+# Before R 4.7, trace() assumes a single class string and its old-class
+# coercion can discard the trace wrapper (#584, r-devel/r-svn#262).
+# Newer R versions inherit the slots above without a custom initializer.
+make_traceable <- function(class) {
+  props <- setdiff(names(methods::getSlots(class)), c(".Data", ".S3Class"))
+
+  methods::setClass(
+    paste0(class, "WithTrace"),
+    contains = c(class, "traceable")
+  )
+  methods::setMethod(
+    "initialize",
+    paste0(class, "WithTrace"),
+    function(.Object, def, ...) {
+      if (missing(def)) {
+        return(methods::callNextMethod(.Object, ...))
+      }
+      original <- def
+      class(def) <- NULL
+      .Object <- methods::callNextMethod(.Object, def = def, ...)
+      .Object@original <- original
+      for (prop in props) {
+        methods::slot(.Object, prop) <- attr(original, prop, exact = TRUE)
+      }
+      attr(.Object, ".S3Class") <- class(original)
+      .Object
+    }
+  )
+}
 
 # hooks -------------------------------------------------------------------
 
 .onAttach <- function(libname, pkgname) {
-  env <- as.environment(paste0("package:", pkgname))
+  activate_bind_compatibility()
+
   if (getRversion() < "4.3.0") {
-    env[[".conflicts.OK"]] <- TRUE
+    # S7_at already supplies @ without conflicting with base::@.
+    env <- as.environment(paste0("package:", pkgname))
+    rm(list = "@", envir = env)
   }
 }
 
+.onDetach <- function(...) {
+  restore_attached_bindings()
+}
+
 .onLoad <- function(...) {
+  .str_legacy <<- getRversion() < "4.7.0"
   activate_backward_compatiblility()
 
+  on_load_define_environment()
   on_load_define_S7_generic()
   on_load_define_S7_method()
   on_load_make_convert_generic()

@@ -351,7 +351,7 @@ of S3. There are two main differences between an S7 object and an S3
 object:</p>
 <ul>
 <li><p>As well as the <code>class</code> attribute possessed by S3
-objects, S7 objects have an additional <code>S7_class</code> attribute
+objects, S7 objects have an additional <code>_S7_class</code> attribute
 that contains the object that defines the class.</p></li>
 <li><p>S7 objects have properties; S3 objects have attributes.
 Properties are implemented on top of attributes, so you can access them
@@ -361,13 +361,9 @@ code will continue to work.</p></li>
 </ul>
 <p>All up, this means most usage of S7 with S3 will just work.</p>
 <ul>
-<li><p>S7 can register methods for:</p>
-<ul>
-<li>S7 class and S3 generic</li>
-<li>S3 class and S7 generic</li>
-</ul></li>
-<li><p>S7 classes can extend S3 classes</p></li>
-<li><p>S3 classes can extend S7 classes</p></li>
+<li>S7 can register methods for S3 generics and S3 classes</li>
+<li>S7 classes can extend S3 classes</li>
+<li>S3 classes can extend S7 classes</li>
 </ul>
 <div id="methods" class="section level3">
 <h3>Methods</h3>
@@ -376,16 +372,34 @@ registration that you need when working with S7 classes. You can also
 register a method for an S7 class and S3 generic without using S7,
 because all S7 objects have S3 classes, and S3 dispatch will operate on
 them normally.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>Foo <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Foo&quot;</span>)</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>Foo <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">package =</span> <span class="st">&quot;Bar&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">class</span>(<span class="fu">Foo</span>())</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Foo&quot;       &quot;S7_object&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Bar::Foo&quot;  &quot;S7_object&quot;</span></span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>mean.Foo <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) {</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="st">`</span><span class="at">mean.Bar::Foo</span><span class="st">`</span> <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) {</span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="st">&quot;mean of foo&quot;</span></span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>}</span>
 <span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
 <span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">Foo</span>())</span>
 <span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; [1] &quot;mean of foo&quot;</span></span></code></pre></div>
+<p>Note that when defining classes in a package, the S3 class name will
+be <code>{package}::{class}</code>, and that means you’ll need to use
+<code>`</code> to define S3 methods.</p>
+</div>
+<div id="generics" class="section level3">
+<h3>Generics</h3>
+<p>If you convert an S3 generic to an S7 generic and want existing S3
+methods (typically in other packages) to continue to work, add a
+<code>class_any</code> method that calls <code>UseMethod()</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>foo <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># Default method dispatches to S3</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="fu">method</span>(foo, class_any) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, ...) {</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="fu">UseMethod</span>(<span class="st">&quot;foo&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>}</span></code></pre></div>
+<p>And then if you need a genuine default method, use S3:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Define the &quot;true&quot; default method</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>foo.default <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">paste0</span>(x, <span class="st">&quot; + 10&quot;</span>)</span></code></pre></div>
 </div>
 <div id="classes" class="section level3">
 <h3>Classes</h3>
@@ -397,93 +411,216 @@ and its subclasses don’t need to change.</p>
 <div id="list-classes" class="section level3">
 <h3>List classes</h3>
 <p>Many simple S3 classes are implemented as lists, e.g. rle.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>rle <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.vector</span>(x) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.list</span>(x)) {</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">&quot;&#39;x&#39; must be a vector of an atomic type&quot;</span>)</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  }</span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">length</span>(x)</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="cf">if</span> (n <span class="sc">==</span> <span class="dv">0</span><span class="dt">L</span>) {</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>    <span class="fu">new_rle</span>(<span class="fu">integer</span>(), x)</span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>    y <span class="ot">&lt;-</span> x[<span class="sc">-</span><span class="dv">1</span><span class="dt">L</span>] <span class="sc">!=</span> x[<span class="sc">-</span>n]</span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>    i <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">which</span>(y <span class="sc">|</span> <span class="fu">is.na</span>(y)), n)</span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>    <span class="fu">new_rle</span>(<span class="fu">diff</span>(<span class="fu">c</span>(<span class="dv">0</span><span class="dt">L</span>, i)), x[i])</span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  }</span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>}</span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>new_rle <span class="ot">&lt;-</span> <span class="cf">function</span>(lengths, values) {</span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="fu">structure</span>(</span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>    <span class="fu">list</span>(</span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>      <span class="at">lengths =</span> lengths,</span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>      <span class="at">values =</span> values</span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>    ),</span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>    <span class="at">class =</span> <span class="st">&quot;rle&quot;</span></span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  )</span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>rle <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.vector</span>(x) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.list</span>(x)) {</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">&quot;&#39;x&#39; must be a vector of an atomic type&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  }</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">length</span>(x)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="cf">if</span> (n <span class="sc">==</span> <span class="dv">0</span><span class="dt">L</span>) {</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>    <span class="fu">Rle</span>(<span class="fu">integer</span>(), x)</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>    y <span class="ot">&lt;-</span> x[<span class="sc">-</span><span class="dv">1</span><span class="dt">L</span>] <span class="sc">!=</span> x[<span class="sc">-</span>n]</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>    i <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">which</span>(y <span class="sc">|</span> <span class="fu">is.na</span>(y)), n)</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>    <span class="fu">Rle</span>(<span class="fu">diff</span>(<span class="fu">c</span>(<span class="dv">0</span><span class="dt">L</span>, i)), x[i])</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  }</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>}</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>Rle <span class="ot">&lt;-</span> <span class="cf">function</span>(lengths, values) {</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  <span class="fu">structure</span>(</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>    <span class="fu">list</span>(</span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>      <span class="at">lengths =</span> lengths,</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>      <span class="at">values =</span> values</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>    ),</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>    <span class="at">class =</span> <span class="st">&quot;Rle&quot;</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>  )</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>}</span></code></pre></div>
 <p>There are two ways to convert this to S7. You could keep the
 structure exactly the same, using a <code>list</code> as the underlying
 data structure and using a constructor to enforce the structure:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>new_rle <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;rle&quot;</span>,</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">parent =</span> class_list,</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">constructor =</span> <span class="cf">function</span>(lengths, values) {</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>    <span class="fu">new_object</span>(<span class="fu">list</span>(<span class="at">lengths =</span> lengths, <span class="at">values =</span> values))</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  }</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>)</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">rle</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; Run Length Encoding</span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;   lengths: int [1:10] 1 1 1 1 1 1 1 1 1 1</span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;   values : int [1:10] 1 2 3 4 5 6 7 8 9 10</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>Rle <span class="sc">:=</span> <span class="fu">new_class</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">parent =</span> class_list,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">constructor =</span> <span class="cf">function</span>(lengths, values) {</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>    <span class="fu">new_object</span>(<span class="fu">list</span>(<span class="at">lengths =</span> lengths, <span class="at">values =</span> values))</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  }</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="fu">rle</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; &lt;Rle&gt; List of 2</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;  $ lengths: int [1:10] 1 1 1 1 1 1 1 1 1 1</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;  $ values : int [1:10] 1 2 3 4 5 6 7 8 9 10</span></span></code></pre></div>
 <p>Alternatively you could convert it to the most natural representation
 using S7:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>new_rle <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;rle&quot;</span>, <span class="at">properties =</span> <span class="fu">list</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">lengths =</span> class_integer,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">values =</span> class_atomic</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>))</span></code></pre></div>
-<p>To allow existing methods to work you’ll need to override
-<code>$</code> to access properties instead of list elements:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">method</span>(<span class="st">`</span><span class="at">$</span><span class="st">`</span>, new_rle) <span class="ot">&lt;-</span> prop</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">rle</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Run Length Encoding</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt;   lengths: int [1:10] 1 1 1 1 1 1 1 1 1 1</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;   values : int [1:10] 1 2 3 4 5 6 7 8 9 10</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>Rle <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">properties =</span> <span class="fu">list</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="at">lengths =</span> class_integer,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">values =</span> class_atomic</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>))</span></code></pre></div>
+<p>To allow existing code that uses <code>$</code> to keep working, like
+<code>inverse.rle()</code>, you’ll need to override <code>$</code> to
+access properties instead of list elements:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">method</span>(<span class="st">`</span><span class="at">$</span><span class="st">`</span>, Rle) <span class="ot">&lt;-</span> prop</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">inverse.rle</span>(<span class="fu">rle</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>))</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt;  [1]  1  2  3  4  5  6  7  8  9 10</span></span></code></pre></div>
 <p>The chief disadvantage of this approach is any subclasses will need
 to be converted to S7 as well.</p>
 </div>
 </div>
 <div id="s4" class="section level2">
 <h2>S4</h2>
-<p>S7 properties are equivalent to S4 slots. The chief difference is
-that they can be dynamic.</p>
+<p>S7 properties play a role similar to S4 slots. The chief difference
+is that S7 properties can be dynamic, while S4 slots are stored fields
+with a declared S4 class.</p>
+<p>S7 and S4 can interoperate in both directions:</p>
 <ul>
-<li>S7 classes can not extend S4 classes</li>
-<li>S4 classes can extend S3 classes</li>
-<li>S7 can register methods for:
-<ul>
-<li>S7 class and S4 generic</li>
-<li>S4 class and S7 generic</li>
-</ul></li>
+<li>S7 classes can extend S4 classes.</li>
+<li>S4 classes can extend S7 classes.</li>
+<li>S7 can register methods for S4 generics and S4 classes.</li>
 </ul>
+<div id="s7-classes-that-extend-s4-classes" class="section level3">
+<h3>S7 classes that extend S4 classes</h3>
+<p>To extend an S4 class, supply its class definition or class generator
+as the <code>parent</code> of a new S7 class. The S4 parent slots become
+S7 properties on the new class, and <code>new_class()</code>
+automatically registers the S7 class with S4.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>methods<span class="sc">::</span><span class="fu">setClass</span>(<span class="st">&quot;S4Point&quot;</span>,</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">slots =</span> <span class="fu">c</span>(<span class="at">x =</span> <span class="st">&quot;numeric&quot;</span>, <span class="at">y =</span> <span class="st">&quot;numeric&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>)</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>ColoredPoint <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;ColoredPoint&quot;</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="at">parent =</span> methods<span class="sc">::</span><span class="fu">getClass</span>(<span class="st">&quot;S4Point&quot;</span>),</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="at">properties =</span> <span class="fu">list</span>(<span class="at">color =</span> class_character)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>)</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>pt <span class="ot">&lt;-</span> <span class="fu">ColoredPoint</span>(<span class="at">x =</span> <span class="dv">1</span>, <span class="at">y =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">&quot;red&quot;</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>pt<span class="sc">@</span>x</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>pt<span class="sc">@</span>color</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt; [1] &quot;red&quot;</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>methods<span class="sc">::</span><span class="fu">is</span>(pt, <span class="st">&quot;S4Point&quot;</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>S4 dispatch follows the S4 parent hierarchy, so S4 methods defined
+for the parent can be called on the S7 child.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>methods<span class="sc">::</span><span class="fu">setGeneric</span>(<span class="st">&quot;radius&quot;</span>, <span class="cf">function</span>(x) <span class="fu">standardGeneric</span>(<span class="st">&quot;radius&quot;</span>))</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;radius&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>methods<span class="sc">::</span><span class="fu">setMethod</span>(<span class="st">&quot;radius&quot;</span>, <span class="st">&quot;S4Point&quot;</span>, <span class="cf">function</span>(x) {</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="fu">sqrt</span>(x<span class="sc">@</span>x<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> x<span class="sc">@</span>y<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>})</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="fu">radius</span>(pt)</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; [1] 2.236068</span></span></code></pre></div>
+<p>S4 code that updates an existing object should use
+<code>initialize()</code> rather than constructing a new object from
+<code>class(x)</code>. The S7 <code>initialize()</code> method accepts
+stored S7 properties and S4 slots, and later arguments override earlier
+ones.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>pt <span class="ot">&lt;-</span> methods<span class="sc">::</span><span class="fu">initialize</span>(pt, <span class="at">x =</span> <span class="dv">3</span>, <span class="at">color =</span> <span class="st">&quot;blue&quot;</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>pt<span class="sc">@</span>x</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; [1] 3</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>pt<span class="sc">@</span>color</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; [1] &quot;blue&quot;</span></span></code></pre></div>
+<p>There are a few important caveats:</p>
+<ul>
+<li>An S7 object that directly extends S4 is represented as an S3
+old-class object, so <code>isS4(pt)</code> is <code>FALSE</code>. Use
+<code>methods::is()</code> to ask about S4 inheritance.</li>
+<li>The class vector is not scalar. S4 code that needs one primary class
+name should use <code>class(x)[1L]</code>, or
+<code>methods::class1(x)</code> when available.</li>
+<li><code>methods::slot()</code> and <code>methods::slot&lt;-()</code>
+can read and write stored properties, but they bypass custom S7 getters,
+setters, and ordinary S7 validation. Call
+<code>methods::validObject()</code> after direct slot updates when the
+object should satisfy the S7 contract.</li>
+<li>Properties with custom getters or setters cannot cross the S4
+inheritance boundary as S4 slots.</li>
+<li><code>NULL</code> properties are stored using the same sentinel that
+S4 uses for <code>NULL</code> slots. <code>prop()</code>,
+<code>@</code>, and <code>methods::slot()</code> translate this back to
+<code>NULL</code>; raw attributes should be treated as an implementation
+detail.</li>
+</ul>
+</div>
+<div id="s4-classes-that-extend-s7-classes" class="section level3">
+<h3>S4 classes that extend S7 classes</h3>
+<p>After calling <code>S4_register()</code>, use
+<code>S4_contains()</code> when an S4 class should extend an S7 class.
+It returns the virtual S4 class name for
+<code>methods::setClass(contains = )</code>. This class exposes stored
+S7 properties as formal S4 slots and carries the <code>_S7_class</code>
+slot that S7 uses for dispatch and validation.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>Sample <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Sample&quot;</span>,</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="at">properties =</span> <span class="fu">list</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>    <span class="at">name =</span> class_character,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>    <span class="at">score =</span> class_numeric</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  ),</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="at">validator =</span> <span class="cf">function</span>(self) {</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">length</span>(self<span class="sc">@</span>score) <span class="sc">!=</span> <span class="dv">1</span>) {</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>      <span class="st">&quot;@score must have length 1&quot;</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>    } <span class="cf">else</span> <span class="cf">if</span> (self<span class="sc">@</span>score <span class="sc">&lt;</span> <span class="dv">0</span>) {</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>      <span class="st">&quot;@score must be non-negative&quot;</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>    }</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>  }</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>)</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="fu">S4_register</span>(Sample)</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>Sample_S4 <span class="ot">&lt;-</span> <span class="fu">S4_contains</span>(Sample)</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>methods<span class="sc">::</span><span class="fu">setClass</span>(<span class="st">&quot;ReplicatedSample&quot;</span>,</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a>  <span class="at">contains =</span> Sample_S4,</span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a>  <span class="at">slots =</span> <span class="fu">c</span>(<span class="at">replicate =</span> <span class="st">&quot;integer&quot;</span>)</span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a>)</span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a>rs <span class="ot">&lt;-</span> methods<span class="sc">::</span><span class="fu">new</span>(<span class="st">&quot;ReplicatedSample&quot;</span>,</span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">&quot;A&quot;</span>,</span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a>  <span class="at">score =</span> <span class="dv">3</span>,</span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a>  <span class="at">replicate =</span> <span class="dv">1</span><span class="dt">L</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a>)</span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a></span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="fu">isS4</span>(rs)</span>
+<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb12-30"><a href="#cb12-30" tabindex="-1"></a>rs<span class="sc">@</span>name</span>
+<span id="cb12-31"><a href="#cb12-31" tabindex="-1"></a><span class="co">#&gt; [1] &quot;A&quot;</span></span>
+<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a><span class="fu">prop</span>(rs, <span class="st">&quot;score&quot;</span>)</span>
+<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a><span class="co">#&gt; [1] 3</span></span>
+<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a>methods<span class="sc">::</span><span class="fu">validObject</span>(rs)</span>
+<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>S7 dispatch still sees the S7 class, even though the concrete object
+is an S4 object.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>sample_label <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;sample_label&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">method</span>(sample_label, Sample) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="fu">paste0</span>(x<span class="sc">@</span>name, <span class="st">&quot;: &quot;</span>, x<span class="sc">@</span>score)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>}</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="fu">sample_label</span>(rs)</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt; [1] &quot;A: 3&quot;</span></span></code></pre></div>
+<p>The class returned by <code>S4_contains()</code> is a compatibility
+layer, not a user-facing class. Do not instantiate it directly; use it
+only as a superclass for another S4 class. Since S4 subclasses are real
+S4 objects, S4 code can access the S7 properties as slots. This is
+necessary for compatibility, but it also means S4 code can bypass S7
+property setters until validation is run.</p>
+</div>
 <div id="unions" class="section level3">
 <h3>Unions</h3>
-<p>S4 unions are automatically converted to S7 unions. There’s an
-important difference in the way that class unions are handled in S4 and
-S7. In S4, they’re handled at method dispatch time, so when you create
+<p>S4 unions are automatically converted to S7 unions when they are used
+as S7 property classes. There’s an important difference in the way that
+class unions are handled in S4 and S7. In S4, they’re handled at method
+dispatch time, so when you create
 <code>setUnion(&quot;u1&quot;, c(&quot;class1&quot;, &quot;class2&quot;))</code>, <code>class1</code>
 and <code>class2</code> now extend <code>u1</code>. In S7, unions are
 handled at method registration time so that registering a method for a
 union is just short-hand for registering a method for each of the
 classes.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>Class1 <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Class1&quot;</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>Class2 <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Class2&quot;</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>Union1 <span class="ot">&lt;-</span> <span class="fu">new_union</span>(Class1, Class2)</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;foo&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="fu">method</span>(foo, Union1) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="st">&quot;&quot;</span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>foo</span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; &lt;S7_generic&gt; foo(x, ...) with 2 methods:</span></span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; 1: method(foo, Class2)</span></span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; 2: method(foo, Class1)</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>Class1 <span class="sc">:=</span> <span class="fu">new_class</span>()</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>Class2 <span class="sc">:=</span> <span class="fu">new_class</span>()</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>Union1 <span class="ot">&lt;-</span> <span class="fu">new_union</span>(Class1, Class2)</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>foo <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="fu">method</span>(foo, Union1) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="st">&quot;&quot;</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>foo</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; &lt;S7_generic&gt; foo(x, ...) with 2 methods:</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; 1: method(foo, Class2)</span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt; 2: method(foo, Class1)</span></span></code></pre></div>
 <p>S7 unions allow you to restrict the type of a property in the same
-way that S4 unions allow you to restrict the type of a slot.</p>
+way that S4 unions allow you to restrict the type of a slot. S7 unions
+can also be registered with <code>S4_register()</code> for use in S4
+slots and method signatures.</p>
 </div>
 </div>
 

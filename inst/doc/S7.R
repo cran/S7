@@ -62,7 +62,16 @@ speak(1)
 })
 
 ## -----------------------------------------------------------------------------
-Pet <- new_class("Pet",
+Dog := new_class(properties = list(
+  name = class_character,
+  age = class_numeric
+))
+Dog
+
+speak := new_generic("x")
+
+## -----------------------------------------------------------------------------
+Pet := new_class(
   properties = list(
     name = class_character,
     age = class_numeric
@@ -70,8 +79,8 @@ Pet <- new_class("Pet",
 )
 
 ## -----------------------------------------------------------------------------
-Cat <- new_class("Cat", parent = Pet)
-Dog <- new_class("Dog", parent = Pet)
+Cat := new_class(parent = Pet)
+Dog := new_class(parent = Pet)
 
 Cat
 Dog
@@ -81,7 +90,7 @@ lola <- Dog(name = "Lola", age = 11)
 fluffy <- Cat(name = "Fluffy", age = 5)
 
 ## -----------------------------------------------------------------------------
-describe <- new_generic("describe", "x")
+describe := new_generic("x")
 method(describe, Pet) <- function(x) {
   paste0(x@name, " is ", x@age, " years old")
 }
@@ -99,7 +108,7 @@ method(describe, S7_object) <- function(x) {
   "An S7 object"
 }
 
-Cocktail <- new_class("Cocktail",
+Cocktail := new_class(
   properties = list(
     ingredients = class_character
   )

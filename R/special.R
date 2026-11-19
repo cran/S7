@@ -1,14 +1,14 @@
 #' Dispatch on a missing argument
 #'
-#' Use `class_missing` to dispatch when the user has not supplied an argument,
-#' i.e. it's missing in the sense of [missing()], not in the sense of
-#' [is.na()].
+#' Use `class_missing` to dispatch when no argument value is available.
+#' Omitted arguments with defaults dispatch on the default's class.
+#' Missing values detected by [is.na()] do not trigger `class_missing` dispatch.
 #'
 #' @export
 #' @return Sentinel objects used for special types of dispatch.
 #' @format NULL
 #' @examples
-#' foo <- new_generic("foo", "x")
+#' foo := new_generic("x")
 #' method(foo, class_numeric) <- function(x) "number"
 #' method(foo, class_missing) <- function(x) "missing"
 #' method(foo, class_any) <- function(x) "fallback"
@@ -27,7 +27,7 @@ print.S7_missing <- function(x, ...) {
 }
 #' @export
 str.S7_missing <- function(object, ..., nest.lev = 0) {
-  cat(if (nest.lev > 0) " ")
+  str_leading_space(nest.lev)
   print(object)
 }
 
@@ -39,7 +39,7 @@ str.S7_missing <- function(object, ..., nest.lev = 0) {
 #' @export
 #' @format NULL
 #' @examples
-#' foo <- new_generic("foo", "x")
+#' foo := new_generic("x")
 #' method(foo, class_numeric) <- function(x) "number"
 #' method(foo, class_any) <- function(x) "fallback"
 #'
@@ -56,6 +56,6 @@ print.S7_any <- function(x, ...) {
 }
 #' @export
 str.S7_any <- function(object, ..., nest.lev = 0) {
-  cat(if (nest.lev > 0) " ")
+  str_leading_space(nest.lev)
   print(object)
 }

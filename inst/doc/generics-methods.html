@@ -365,13 +365,17 @@ arguments.</li>
 <li>The method can contain arguments that the generic does not, as long
 as the generic includes <code>…</code> in the argument list.</li>
 </ul>
+<p>Dispatch arguments can have defaults in the generic. When an argument
+is omitted, S7 evaluates its default and dispatches on that value’s
+class. If no value or default is available, S7 dispatches on
+<code>class_missing</code>.</p>
 <div id="generic-with-dots-method-without-dots" class="section level3">
 <h3>Generic with dots; method without dots</h3>
 <p>The default generic includes <code>…</code> but generally the methods
 should not. That ensures that misspelled arguments won’t be silently
 swallowed by the method. This is an important difference from S3. Take a
 very simple implementation of <code>mean()</code>:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>mean <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>mean <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">method</span>(mean, class_numeric) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">sum</span>(x) <span class="sc">/</span> <span class="fu">length</span>(x)</span></code></pre></div>
 <p>If we pass an additional argument in, we’ll get an error:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">mean</span>(<span class="dv">100</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
@@ -395,7 +399,7 @@ a <code>na.rm = TRUE</code> argument shortly.)</p>
 <p>There are cases where you do need to take <code>…</code> in a method,
 which is particularly problematic if you need to re-call the generic
 recursively. For example, imagine a simple print method like this:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>simple_print <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;simple_print&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>simple_print <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">method</span>(simple_print, class_double) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">digits =</span> <span class="dv">3</span>) {}</span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">method</span>(simple_print, class_character) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">max_length =</span> <span class="dv">100</span>) {}</span></code></pre></div>
 <p>What if you want to print a list?</p>
@@ -435,7 +439,7 @@ generic. This function has one key property: it must call
 <p>In general, this property is only needed for very low-level functions
 with precisely defined semantics. A good example of such a function is
 <code>length()</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>length <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;length&quot;</span>, <span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x) {</span>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>length <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x) {</span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="fu">S7_dispatch</span>()</span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>})</span></code></pre></div>
 <p>Omitting <code>…</code> from the generic signature is a strong
@@ -448,7 +452,7 @@ reason, it should only be used in special situations.</p>
 <p>In most cases, you’ll supply the first two arguments to
 <code>new_generic()</code> and allow it to automatically generate the
 body of the generic:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>display <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;display&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>display <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
 <span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">S7_data</span>(display)</span>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; function (x, ...) </span></span>
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; S7::S7_dispatch()</span></span></code></pre></div>
@@ -470,7 +474,7 @@ useful cases:</p>
 <h3>Add required arguments</h3>
 <p>To add required arguments that aren’t dispatched upon, you just need
 to add additional arguments that lack default values:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>foo <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;foo&quot;</span>, <span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x, y, ...) {</span>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>foo <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x, y, ...) {</span>
 <span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="fu">S7_dispatch</span>()</span>
 <span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>})</span></code></pre></div>
 <p>Now all methods will need to provide that <code>y</code> argument. If
@@ -489,7 +493,7 @@ You’ll always want to address this warning when you see it.</p>
 after <code>…</code>. This ensures that the user must supply the full
 name of the argument when calling the function, which makes it easier to
 extend your function in the future.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>mean <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x, ..., <span class="at">na.rm =</span> <span class="cn">TRUE</span>) {</span>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>mean <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x, ..., <span class="at">na.rm =</span> <span class="cn">TRUE</span>) {</span>
 <span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="fu">S7_dispatch</span>()</span>
 <span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>})</span>
 <span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="fu">method</span>(mean, class_integer) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) {</span>
@@ -513,7 +517,7 @@ generate a warning.</p>
 additional work to verify that they’re of the expected type. For
 example, our <code>mean()</code> function could verify that
 <code>na.rm</code> was correctly specified:</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>mean <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x, ..., <span class="at">na.rm =</span> <span class="cn">TRUE</span>) {</span>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>mean <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>, <span class="cf">function</span>(x, ..., <span class="at">na.rm =</span> <span class="cn">TRUE</span>) {</span>
 <span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">identical</span>(na.rm, <span class="cn">TRUE</span>) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">identical</span>(<span class="at">na.rm =</span> <span class="cn">FALSE</span>)) {</span>
 <span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">&quot;`na.rm` must be either TRUE or FALSE&quot;</span>)</span>
 <span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>  }</span>
@@ -535,14 +539,14 @@ mean of the underlying numeric vector and converting it back to a
 date.</p>
 <p>To demonstrate this idea, I’ll first define a mean generic with a
 method for numbers:</p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>mean <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;mean&quot;</span>, <span class="st">&quot;x&quot;</span>)</span>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>mean <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="st">&quot;x&quot;</span>)</span>
 <span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="fu">method</span>(mean, class_numeric) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
 <span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="fu">sum</span>(x) <span class="sc">/</span> <span class="fu">length</span>(x)</span>
 <span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>}</span>
 <span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a><span class="fu">mean</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
 <span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="co">#&gt; [1] 5.5</span></span></code></pre></div>
 <p>And a Date class:</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>date <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;date&quot;</span>, <span class="at">parent =</span> class_double)</span>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>date <span class="sc">:=</span> <span class="fu">new_class</span>(<span class="at">parent =</span> class_double)</span>
 <span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a><span class="co"># Cheat by using the existing base .Date class</span></span>
 <span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="fu">method</span>(print, date) <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">print</span>(<span class="fu">.Date</span>(x))</span>
 <span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a><span class="fu">date</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">10</span>, <span class="dv">100</span>))</span>
@@ -587,15 +591,15 @@ it is occasionally useful.</p>
 <h3>A simple example</h3>
 <p>Let’s take our speak example from <code>vignette(&quot;S7&quot;)</code> and
 extend it to teach our pets how to speak multiple languages:</p>
-<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a>Pet <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Pet&quot;</span>)</span>
-<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>Dog <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Dog&quot;</span>, Pet)</span>
-<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>Cat <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Cat&quot;</span>, Pet)</span>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a>Pet <span class="sc">:=</span> <span class="fu">new_class</span>()</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>Dog <span class="sc">:=</span> <span class="fu">new_class</span>(Pet)</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>Cat <span class="sc">:=</span> <span class="fu">new_class</span>(Pet)</span>
 <span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a></span>
-<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>Language <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;Language&quot;</span>)</span>
-<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>English <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;English&quot;</span>, Language)</span>
-<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>French <span class="ot">&lt;-</span> <span class="fu">new_class</span>(<span class="st">&quot;French&quot;</span>, Language)</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>Language <span class="sc">:=</span> <span class="fu">new_class</span>()</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>English <span class="sc">:=</span> <span class="fu">new_class</span>(Language)</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>French <span class="sc">:=</span> <span class="fu">new_class</span>(Language)</span>
 <span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a></span>
-<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>speak <span class="ot">&lt;-</span> <span class="fu">new_generic</span>(<span class="st">&quot;speak&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>))</span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>speak <span class="sc">:=</span> <span class="fu">new_generic</span>(<span class="fu">c</span>(<span class="st">&quot;x&quot;</span>, <span class="st">&quot;y&quot;</span>))</span>
 <span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="fu">method</span>(speak, <span class="fu">list</span>(Dog, English)) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) <span class="st">&quot;Woof&quot;</span></span>
 <span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="fu">method</span>(speak, <span class="fu">list</span>(Cat, English)) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) <span class="st">&quot;Meow&quot;</span></span>
 <span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a><span class="fu">method</span>(speak, <span class="fu">list</span>(Dog, French)) <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) <span class="st">&quot;Ouaf Ouaf&quot;</span></span>
@@ -615,8 +619,9 @@ extend it to teach our pets how to speak multiple languages:</p>
 multiple dispatch:</p>
 <ul>
 <li><code>class_any()</code> will match any class</li>
-<li><code>class_missing()</code> will match a missing argument (i.e. not
-<code>NA</code>, but an argument that was not supplied)</li>
+<li><code>class_missing()</code> will match an argument with no
+available value. Omitted arguments with defaults dispatch on the
+default’s class.</li>
 </ul>
 </div>
 </div>

@@ -10,8 +10,9 @@ new_generic(name, dispatch_args, fun = NULL)
 S7_dispatch()
 }
 \arguments{
-\item{name}{The name of the generic. This should be the same as the object
-that you assign it to.}
+\item{name}{The name of the generic. The result of calling \code{new_generic()}
+should always be assigned to a variable with this name, i.e.
+\code{bar <- new_generic("bar", ...)} or \code{bar := new_generic(...)}.}
 
 \item{dispatch_args}{A character vector giving the names of one or more
 arguments used to find the method.}
@@ -49,11 +50,16 @@ one argument, it's said to use \strong{multiple dispatch}.
 There are two restrictions on the dispatch arguments: they must be the first
 arguments to the generic and if the generic uses \code{...}, it must occur
 immediately after the dispatch arguments.
+
+Dispatch arguments can have defaults in the generic. If an argument is
+omitted, S7 evaluates its default and dispatches on that value's class.
+Arguments with no supplied value or default dispatch on \link{class_missing}.
+Methods must not define defaults for dispatch arguments.
 }
 
 \examples{
 # A simple generic with methods for some base types and S3 classes
-type_of <- new_generic("type_of", dispatch_args = "x")
+type_of := new_generic(dispatch_args = "x")
 method(type_of, class_character) <- function(x, ...) "A character vector"
 method(type_of, new_S3_class("data.frame")) <- function(x, ...) "A data frame"
 method(type_of, class_function) <- function(x, ...) "A function"
@@ -64,7 +70,7 @@ type_of(mean)
 
 # If you want to require that methods implement additional arguments,
 # you can use a custom function:
-mean2 <- new_generic("mean2", "x", function(x, ..., na.rm = FALSE) {
+mean2 := new_generic("x", function(x, ..., na.rm = FALSE) {
    S7_dispatch()
 })
 

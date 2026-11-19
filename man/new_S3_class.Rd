@@ -4,7 +4,13 @@
 \alias{new_S3_class}
 \title{Declare an S3 class}
 \usage{
-new_S3_class(class, constructor = NULL, validator = NULL)
+new_S3_class(
+  class,
+  constructor = NULL,
+  validator = NULL,
+  default = NULL,
+  attributes = NULL
+)
 }
 \arguments{
 \item{class}{S3 class vector (i.e. what \code{class()} returns). For method
@@ -28,6 +34,19 @@ the S7 object adheres to the constraints of the S3 class.
 A validator is a single argument function that takes the object to
 validate and returns \code{NULL} if the object is valid. If the object is
 invalid, it returns a character vector of problems.}
+
+\item{default}{An optional quoted call or symbol to use as the default when
+this class is used for a property. It is evaluated each time the property
+is omitted during object construction. If \code{NULL}, the default is
+obtained from \code{constructor}. A default supplied to \code{\link[=new_property]{new_property()}} takes
+precedence.}
+
+\item{attributes}{A character vector of attribute names used by the S3
+class, excluding \code{class}. Use \code{character()} for a class with no other
+attributes. The default, \code{NULL}, means the attributes are unknown, so
+\code{\link[=new_object]{new_object()}} preserves all attributes of the parent object.
+This declaration controls which attributes are copied during construction;
+it does not require them to be present or validate their values.}
 }
 \value{
 An S7 definition of an S3 class, i.e. a list with class
@@ -87,16 +106,24 @@ A Date is a numeric vector with class \code{Date} that can be constructed with
     if (!is.numeric(self)) \{
       "Underlying data must be numeric"
     \}
-  \}
+  \},
+  default = quote(.Date(integer()))
 )
 }\if{html}{\out{</div>}}
+
+You can also declare the complete set of attributes used by the S3 class
+with \code{attributes}. This allows \code{\link[=new_object]{new_object()}} to discard foreign attributes
+when constructing S7 subclasses, while preserving the declared attributes
+and S7 properties. Include optional attributes such as \code{names} if they are
+supported; \code{class} is managed automatically. For example, a factor wrapper
+could use \code{attributes = c("levels", "names", "dim", "dimnames")}.
 }
 
 \examples{
 # No checking, just used for dispatch
 Date <- new_S3_class("Date")
 
-my_generic <- new_generic("my_generic", "x")
+my_generic := new_generic("x")
 method(my_generic, Date) <- function(x) "This is a date"
 
 my_generic(Sys.Date())

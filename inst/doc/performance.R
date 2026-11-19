@@ -8,13 +8,13 @@ knitr::opts_chunk$set(
 library(S7)
 
 ## ----performance, cache = FALSE-----------------------------------------------
-Text <- new_class("Text", parent = class_character)
-Number <- new_class("Number", parent = class_double)
+Text := new_class(parent = class_character)
+Number := new_class(parent = class_double)
 
 x <- Text("hi")
 y <- Number(1)
 
-foo_S7 <- new_generic("foo_S7", "x")
+foo_S7 := new_generic("x")
 method(foo_S7, Text) <- function(x, ...) paste0(x, "-foo")
 
 foo_S3 <- function(x, ...) {
@@ -35,7 +35,7 @@ setMethod("foo_S4", c("Text"), function(x, ...) paste0(x, "-foo"))
 # Measure performance of single dispatch
 bench::mark(foo_S7(x), foo_S3(x), foo_S4(x))
 
-bar_S7 <- new_generic("bar_S7", c("x", "y"))
+bar_S7 := new_generic(c("x", "y"))
 method(bar_S7, list(Text, Number)) <- function(x, y, ...) paste0(x, "-", y, "-bar")
 
 setGeneric("bar_S4", function(x, y, ...) standardGeneric("bar_S4"))
@@ -60,7 +60,7 @@ bench::press(
   class_nchar = c(15, 100),
   {
     # Construct a class hierarchy with that number of classes
-    Text <- new_class("Text", parent = class_character)
+    Text := new_class(parent = class_character)
     parent <- Text
     classes <- gen_character(num_classes, min = class_nchar, max = class_nchar)
     env <- new.env()
@@ -76,11 +76,11 @@ bench::press(
     x <- do.call(cls, list("hi"))
 
     # Define a generic and a method for the last class (best case scenario)
-    foo_S7 <- new_generic("foo_S7", "x")
+    foo_S7 := new_generic("x")
     method(foo_S7, cls) <- function(x, ...) paste0(x, "-foo")
 
     # Define a generic and a method for the first class (worst case scenario)
-    foo2_S7 <- new_generic("foo2_S7", "x")
+    foo2_S7 := new_generic("x")
     method(foo2_S7, S7_object) <- function(x, ...) paste0(x, "-foo")
 
     bench::mark(
@@ -96,7 +96,7 @@ bench::press(
   class_nchar = c(15, 100),
   {
     # Construct a class hierarchy with that number of classes
-    Text <- new_class("Text", parent = class_character)
+    Text := new_class(parent = class_character)
     parent <- Text
     classes <- gen_character(num_classes, min = class_nchar, max = class_nchar)
     env <- new.env()
@@ -113,11 +113,11 @@ bench::press(
     y <- do.call(cls, list("ho"))
 
     # Define a generic and a method for the last class (best case scenario)
-    foo_S7 <- new_generic("foo_S7", c("x", "y"))
+    foo_S7 := new_generic(c("x", "y"))
     method(foo_S7, list(cls, cls)) <- function(x, y, ...) paste0(x, y, "-foo")
 
     # Define a generic and a method for the first class (worst case scenario)
-    foo2_S7 <- new_generic("foo2_S7", c("x", "y"))
+    foo2_S7 := new_generic(c("x", "y"))
     method(foo2_S7, list(S7_object, S7_object)) <- function(x, y, ...) paste0(x, y, "-foo")
 
     bench::mark(

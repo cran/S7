@@ -1,3 +1,11 @@
+# resolve_generic() warns instead of erroring when generic is missing
+
+    Code
+      out <- resolve_generic(gen)
+    Condition
+      Warning:
+      [S7] Failed to find generic gen() in package testpkg
+
 # displays nicely
 
     Code
@@ -41,5 +49,5 @@
       new_class("Foo", properties = list(bar = modified_class))
     Condition
       Error:
-      ! `t0::An S7 Class` is not identical to the class with the same @package and @name properties
+      ! `t0::An S7 Class` is not identical to the class with the same @package and @name properties.
 

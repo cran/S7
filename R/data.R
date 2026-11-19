@@ -1,8 +1,10 @@
 #' Get/set underlying "base" data
 #'
 #' When an S7 class inherits from an existing base type, it can be useful
-#' to work with the underlying object, i.e. the S7 object stripped of class
-#' and properties.
+#' to work with the underlying object, i.e. the S7 object stripped of its
+#' S7 class and properties. If the class inherits from an S3 class,
+#' `S7_data()` preserves the S3 class so the result remains a valid
+#' object of that type.
 #'
 #' @inheritParams prop
 #' @param value Object used to replace the underlying data.
@@ -11,31 +13,65 @@
 #'   invisibly.
 #' @export
 #' @examples
-#' Text <- new_class("Text", parent = class_character)
+#' Text := new_class(parent = class_character)
 #' y <- Text(c(foo = "bar"))
 #' y
 #' S7_data(y)
 #'
 #' S7_data(y) <- c("a", "b")
 #' y
+#'
+#' # S3 classes are preserved
+#' MyDF := new_class(parent = class_data.frame)
+#' S7_data(MyDF(data.frame(x = 1, y = 2)))
 S7_data <- function(object) {
   check_is_S7(object)
+  check_not_environment(object, "S7_data()")
 
-  zap_attr(object, c(prop_names(object), "class", "S7_class"))
+  out <- zap_attr(object, c(prop_storage_names(object), S7_object_attrs))
+
+  # Objects accepted by is_legacy_S7_object() have no parent metadata to restore.
+  base <- base_parent(S7_class(object))
+  if (is_S3_class(base)) {
+    class(out) <- base$class
+  }
+  out
+}
+
+# Walk up the @parent chain to the first non-S7 ancestor (or S7_object),
+# resolving external classes so the walk can continue through them.
+base_parent <- function(class) {
+  while (is_class(class)) {
+    parent <- attr(class, "parent", exact = TRUE)
+    if (is.null(parent)) {
+      break
+    }
+    if (is_external_class(parent)) {
+      parent <- resolve_external_class_req(
+        parent,
+        package = attr(class, "package", exact = TRUE)
+      )
+    }
+    class <- parent
+  }
+  class
 }
 
 #' @export
 #' @rdname S7_data
 `S7_data<-` <- function(object, check = TRUE, value) {
-  attrs <- attributes(object)
-  object <- value
-  attributes(object) <- attrs
-  if (isTRUE(check)) {
-    validate(object)
-  }
-  return(invisible(object))
-}
+  check_is_S7(object)
+  check_not_environment(object, "S7_data<-")
 
+  s7_attrs <- c(prop_storage_names(object), S7_object_attrs)
+  for (name in s7_attrs) {
+    attr(value, name) <- attr(object, name, exact = TRUE)
+  }
+  if (isTRUE(check)) {
+    validate(value)
+  }
+  return(invisible(value))
+}
 
 zap_attr <- function(x, names) {
   for (name in names) {

@@ -3,31 +3,45 @@
 #include <R_ext/Rdynload.h>
 
 /* .Call calls */
-extern SEXP method_(SEXP, SEXP, SEXP, SEXP);
+extern SEXP method_(SEXP, SEXP);
 extern SEXP method_call_(SEXP, SEXP, SEXP, SEXP);
 extern SEXP test_call_(SEXP, SEXP, SEXP, SEXP);
-extern SEXP S7_class_(SEXP, SEXP);
+extern SEXP S7_class_(SEXP);
 extern SEXP S7_object_(void);
 extern SEXP prop_(SEXP, SEXP);
 extern SEXP prop_set_(SEXP, SEXP, SEXP, SEXP);
+extern SEXP prop_storage_rename_(SEXP);
+extern SEXP S7_eval_bare_(SEXP, SEXP);
+extern SEXP class_type_(SEXP);
+extern SEXP obj_addr_(SEXP);
+extern void prop_init(void);
+extern void class_type_init(void);
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
 static const R_CallMethodDef CallEntries[] = {
-    CALLDEF(method_, 4),
+    CALLDEF(method_, 2),
     CALLDEF(S7_object_, 0),
+    CALLDEF(S7_class_, 1),
     CALLDEF(prop_, 2),
     CALLDEF(prop_set_, 4),
+    CALLDEF(prop_storage_rename_, 1),
+    CALLDEF(S7_eval_bare_, 2),
+    CALLDEF(class_type_, 1),
+    CALLDEF(obj_addr_, 1),
     {NULL, NULL, 0}
 };
 
 static const R_ExternalMethodDef ExternalEntries[] = {
-    CALLDEF(method_call_, 2),
+    CALLDEF(method_call_, 3),
     {NULL, NULL, 0}
 };
 
 SEXP sym_ANY;
 SEXP sym_S7_class;
+SEXP sym_S7_class_legacy;
+SEXP sym_class;
+static SEXP sym_S7_version;
 
 SEXP sym_name;
 SEXP sym_parent;
@@ -41,6 +55,21 @@ SEXP sym_getter;
 SEXP sym_dot_should_validate;
 SEXP sym_dot_getting_prop;
 SEXP sym_dot_setting_prop;
+SEXP sym_u_dispatched_super;
+
+// `comment` lacks a predefined R_*Symbol, unlike the other special names.
+SEXP sym_comment;
+
+// Storage symbols for properties whose names have special C-level handlers in
+// base R (names, dim, ...). See prop_storage_sym() in prop.c.
+SEXP sym_u_names;
+SEXP sym_u_dim;
+SEXP sym_u_dimnames;
+SEXP sym_u_class;
+SEXP sym_u_tsp;
+SEXP sym_u_comment;
+SEXP sym_u_row_names;
+
 SEXP sym_obj_dispatch;
 SEXP sym_dispatch_args;
 SEXP sym_methods;
@@ -48,12 +77,13 @@ SEXP sym_S7_dispatch;
 SEXP sym_name;
 
 SEXP fn_base_quote;
-SEXP fn_base_missing;
+SEXP missing_call;
 
 SEXP ns_S7;
 
 SEXP R_TRUE, R_FALSE;
 SEXP s7_proto_object;
+static SEXP r_string_S7_object, s7_object_version;
 
 static SEXP make_s7_proto_object(void)
 {
@@ -62,7 +92,8 @@ static SEXP make_s7_proto_object(void)
         Rf_install("asS3"), obj, /*flag =*/ R_TRUE, /*complete =*/ R_FALSE
     ));
     obj = PROTECT(Rf_eval(asS3_call, R_BaseEnv));
-    Rf_classgets(obj, Rf_mkString("S7_object"));
+    Rf_classgets(obj, r_string_S7_object);
+    Rf_setAttrib(obj, sym_S7_version, s7_object_version);
 
     UNPROTECT(3);
     return obj;
@@ -73,8 +104,15 @@ void R_init_S7(DllInfo *dll)
     R_registerRoutines(dll, NULL, CallEntries, NULL, ExternalEntries);
     R_useDynamicSymbols(dll, FALSE);
 
+    R_RegisterCCallable("S7", "S7_get_class", (DL_FUNC) &S7_class_);
+    R_RegisterCCallable("S7", "S7_get_prop", (DL_FUNC) &prop_);
+
     sym_ANY = Rf_install("ANY");
-    sym_S7_class = Rf_install("S7_class");
+    sym_S7_class = Rf_install("_S7_class");
+    // Legacy name used by objects created with an older version of S7.
+    sym_S7_class_legacy = Rf_install("S7_class");
+    sym_S7_version = Rf_install("_S7_version");
+    sym_class = Rf_install("class");
     sym_name = Rf_install("name");
     sym_parent = Rf_install("parent");
     sym_package = Rf_install("package");
@@ -86,6 +124,17 @@ void R_init_S7(DllInfo *dll)
     sym_dot_should_validate = Rf_install(".should_validate");
     sym_dot_getting_prop = Rf_install(".getting_prop");
     sym_dot_setting_prop = Rf_install(".setting_prop");
+    sym_u_dispatched_super = Rf_install("_dispatched_super");
+
+    sym_comment = Rf_install("comment");
+
+    sym_u_names = Rf_install("_names");
+    sym_u_dim = Rf_install("_dim");
+    sym_u_dimnames = Rf_install("_dimnames");
+    sym_u_class = Rf_install("_class");
+    sym_u_tsp = Rf_install("_tsp");
+    sym_u_comment = Rf_install("_comment");
+    sym_u_row_names = Rf_install("_row.names");
     sym_obj_dispatch = Rf_install("obj_dispatch");
     sym_dispatch_args = Rf_install("dispatch_args");
     sym_methods = Rf_install("methods");
@@ -93,10 +142,17 @@ void R_init_S7(DllInfo *dll)
     sym_name = Rf_install("name");
 
     fn_base_quote = Rf_eval(Rf_install("quote"), R_BaseEnv);
-    fn_base_missing = Rf_eval(Rf_install("missing"), R_BaseEnv);
 
     ns_S7 = R_FindNamespace(Rf_mkString("S7"));
     R_PreserveObject(R_TRUE = Rf_ScalarLogical(1));
     R_PreserveObject(R_FALSE = Rf_ScalarLogical(0));
+    R_PreserveObject(r_string_S7_object = Rf_mkString("S7_object"));
+    // Keep in sync with S7_object_version in R/class.R.
+    R_PreserveObject(s7_object_version = Rf_ScalarInteger(1));
+    prop_init();
+    class_type_init();
     R_PreserveObject(s7_proto_object = make_s7_proto_object());
+    SEXP fn_missing = PROTECT(Rf_eval(Rf_install("dispatch_arg_missing"), ns_S7));
+    R_PreserveObject(missing_call = Rf_lang2(fn_missing, R_NilValue));
+    UNPROTECT(1);
 }

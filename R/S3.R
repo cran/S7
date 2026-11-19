@@ -54,9 +54,17 @@
 #'     if (!is.numeric(self)) {
 #'       "Underlying data must be numeric"
 #'     }
-#'   }
+#'   },
+#'   default = quote(.Date(integer()))
 #' )
 #' ```
+#'
+#' You can also declare the complete set of attributes used by the S3 class
+#' with `attributes`. This allows [new_object()] to discard foreign attributes
+#' when constructing S7 subclasses, while preserving the declared attributes
+#' and S7 properties. Include optional attributes such as `names` if they are
+#' supported; `class` is managed automatically. For example, a factor wrapper
+#' could use `attributes = c("levels", "names", "dim", "dimnames")`.
 #'
 #' @export
 #' @param class S3 class vector (i.e. what `class()` returns). For method
@@ -78,32 +86,69 @@
 #'   A validator is a single argument function that takes the object to
 #'   validate and returns `NULL` if the object is valid. If the object is
 #'   invalid, it returns a character vector of problems.
+#' @param default An optional quoted call or symbol to use as the default when
+#'   this class is used for a property. It is evaluated each time the property
+#'   is omitted during object construction. If `NULL`, the default is
+#'   obtained from `constructor`. A default supplied to [new_property()] takes
+#'   precedence.
+#' @param attributes A character vector of attribute names used by the S3
+#'   class, excluding `class`. Use `character()` for a class with no other
+#'   attributes. The default, `NULL`, means the attributes are unknown, so
+#'   [new_object()] preserves all attributes of the parent object.
+#'   This declaration controls which attributes are copied during construction;
+#'   it does not require them to be present or validate their values.
 #' @returns An S7 definition of an S3 class, i.e. a list with class
 #'   `S7_S3_class`.
 #' @examples
 #' # No checking, just used for dispatch
 #' Date <- new_S3_class("Date")
 #'
-#' my_generic <- new_generic("my_generic", "x")
+#' my_generic := new_generic("x")
 #' method(my_generic, Date) <- function(x) "This is a date"
 #'
 #' my_generic(Sys.Date())
-new_S3_class <- function(class, constructor = NULL, validator = NULL) {
+new_S3_class <- function(
+  class,
+  constructor = NULL,
+  validator = NULL,
+  default = NULL,
+  attributes = NULL
+) {
   if (!is.character(class)) {
-    stop("`class` must be a character vector", call. = FALSE)
+    stop2("`class` must be a character vector.")
+  }
+  if (!is.null(default) && !is.call(default) && !is.symbol(default)) {
+    stop2("`default` must be NULL or a quoted call or symbol.")
+  }
+  if (
+    !is.null(attributes) &&
+      (!is.character(attributes) || anyNA(attributes) || any(attributes == ""))
+  ) {
+    stop2(
+      "`attributes` must be NULL or a character vector of non-empty, non-missing names."
+    )
   }
   if (!is.null(constructor)) {
+    abstract <- FALSE
     check_S3_constructor(constructor)
   } else {
-    constructor <- function(.data) {
-      stop(sprintf("S3 class <%s> doesn't have a constructor", class[[1]]), call. = FALSE)
-    }
+    abstract <- TRUE
+    constructor <- new_S7_constructor(new_function(
+      args = alist(.data = ),
+      body = bquote(stop2(
+        sprintf("S3 class <%s> doesn't have a constructor.", .(class[[1]])),
+        call = NULL
+      ))
+    ))
   }
 
   out <- list(
     class = class,
     constructor = constructor,
-    validator = validator
+    validator = validator,
+    abstract = abstract,
+    default = default,
+    attributes = attributes
   )
   class(out) <- "S7_S3_class"
   out
@@ -117,17 +162,23 @@ print.S7_S3_class <- function(x, ...) {
 
 #' @export
 str.S7_S3_class <- function(object, ..., nest.lev = 0) {
-  cat(if (nest.lev > 0) " ")
+  str_leading_space(nest.lev)
   print(object, ..., nest.lev = nest.lev)
 }
 
-check_S3_constructor <- function(constructor) {
+#' @rawNamespace if (getRversion() >= "4.3.0") S3method(nameOfClass,S7_S3_class)
+#' @exportS3Method NULL
+nameOfClass.S7_S3_class <- function(x) {
+  x[["class"]]
+}
+
+check_S3_constructor <- function(constructor, call = sys.call(-1L)) {
   arg_names <- names(formals(constructor))
   if (arg_names[[1]] != ".data") {
-    stop("First argument to `constructor` must be .data", call. = FALSE)
+    stop2("First argument to `constructor` must be .data.", call = call)
   }
   if ("..." %in% arg_names) {
-    stop("`constructor` can not use `...`", call. = FALSE)
+    stop2("`constructor` can not use `...`.", call = call)
   }
 }
 
@@ -135,29 +186,52 @@ is_S3_class <- function(x) {
   inherits(x, "S7_S3_class")
 }
 
+# Detect the stub constructor emitted by S7 <= 0.2.2, before S3 class
+# definitions recorded whether they were abstract (#686, #747).
+is_S3_stub_constructor <- function(constructor) {
+  if (!is.function(constructor)) {
+    return(FALSE)
+  }
+  call <- find_call(body(constructor), quote(sprintf))
+  if (is.null(call)) {
+    return(FALSE)
+  }
+  fmt <- call[[2]]
+  is.character(fmt) && grepl("doesn't have a constructor", fmt, fixed = TRUE)
+}
+
 # -------------------------------------------------------------------------
 # Pull out validation functions so hit by code coverage
 
 validate_factor <- function(self) {
   c(
-    if (typeof(self) != "integer")
-      "Underlying data must be an <integer>",
-    if (!is.character(attr(self, "levels", TRUE)))
-      "attr(, 'levels') must be a <character>",
-    { rng <- range(0L, unclass(self)); NULL },
-    if (rng[1] < 0L)
-      "Underlying data must be all positive",
-    if (rng[2] > length(attr(self, "levels", TRUE)))
+    if (typeof(self) != "integer") {
+      "Underlying data must be an <integer>"
+    },
+    if (!is.character(attr(self, "levels", TRUE))) {
+      "attr(, 'levels') must be a <character>"
+    },
+    {
+      rng <- range(0L, unclass(self), na.rm = TRUE)
+      NULL
+    },
+    if (rng[1] < 0L) {
+      "Underlying data must be all positive"
+    },
+    if (rng[2] > length(attr(self, "levels", TRUE))) {
       "Not enough 'levels' for underlying data"
+    }
   )
 }
 
 validate_date <- function(self) {
   c(
-    if (mode(self) != "numeric")
-      "Underlying data must be numeric",
-    if (!inherits(self, "Date"))
+    if (mode(self) != "numeric") {
+      "Underlying data must be numeric"
+    },
+    if (!inherits(self, "Date")) {
       "Underlying data must have class 'Date'"
+    }
   )
 }
 
@@ -166,17 +240,20 @@ validate_POSIXct <- function(self) {
     return("Underlying data must be numeric")
   }
 
-  tz <- attr(self, "tz")
-  if (!is.character(tz) || length(tz) != 1) {
-    return("attr(, 'tz') must be a single string")
+  tz <- attr(self, "tzone", exact = TRUE)
+  if (!is.null(tz) && (!is.character(tz) || length(tz) != 1)) {
+    return("attr(, 'tzone') must be NULL or a single string")
   }
 }
 
 validate_POSIXlt <- function(self) {
-  tryCatch({
-    format(self) # calls valid_POSIXlt() in C
-    invisible(NULL)
-  }, error = function(e) conditionMessage(e))
+  tryCatch(
+    {
+      format(self) # calls valid_POSIXlt() in C
+      invisible(NULL)
+    },
+    error = function(e) conditionMessage(e)
+  )
 }
 
 validate_data.frame <- function(self) {
@@ -185,8 +262,12 @@ validate_data.frame <- function(self) {
   }
 
   if (length(self) >= 1) {
+    # `lengths()` gives the wrong answer for data frame and matrix columns
+    # Inspect the columns without calling a subclass's as.list() method.
+    col_lengths <- vapply(unclass(self), NROW, integer(1L), USE.NAMES = FALSE)
+
     # Avoid materialising compact row names
-    ns <- unique(c(lengths(self), .row_names_info(self, 2L)))
+    ns <- unique(c(col_lengths, .row_names_info(self, 2L)))
     if (length(ns) > 1) {
       return("All columns and row names must have the same length")
     }
@@ -199,15 +280,19 @@ validate_data.frame <- function(self) {
 
 valid_dimnames <- function(self) {
   dn <- dimnames(self)
-  if (is.null(dn))
+  if (is.null(dn)) {
     TRUE
-  else if (!is.list(dn) || length(dn) != length(dim(self)))
+  } else if (!is.list(dn) || length(dn) != length(dim(self))) {
     FALSE
-  else for (i in seq_along(dimnames(self))) {
-    if (is.null(dn[[i]]))
-      next
-    if (!is.character(dn[[i]]) || length(dn[[i]]) != dim(self)[[i]])
-      return(FALSE)
+  } else {
+    for (i in seq_along(dimnames(self))) {
+      if (is.null(dn[[i]])) {
+        next
+      }
+      if (!is.character(dn[[i]]) || length(dn[[i]]) != dim(self)[[i]]) {
+        return(FALSE)
+      }
+    }
   }
   TRUE
 }
@@ -216,7 +301,9 @@ validate_matrix <- function(self) {
   if (!is.matrix(self)) {
     # is.matrix() methods should only return TRUE if valid
     "is.matrix(self) is FALSE"
-  } else if (!is.integer(dim(self)) || length(dim(self)) != 2L || !all(dim(self) >= 0L)) {
+  } else if (
+    !is.integer(dim(self)) || length(dim(self)) != 2L || !all(dim(self) >= 0L)
+  ) {
     "dim(self) must be a non-negative integer vector of length 2"
   } else if (!valid_dimnames(self)) {
     "dimnames(self) must be NULL or a length 2 list of either NULL or a character vector of length equal to its corresponding dimension"
@@ -224,22 +311,38 @@ validate_matrix <- function(self) {
 }
 
 validate_array <- function(self) {
-  if (is.array(self)) # is.array() methods should only return TRUE if valid
+  if (is.array(self)) {
+    # is.array() methods should only return TRUE if valid
     return(invisible(NULL))
-  if (!is.integer(dim(self)) || length(dim(self)) == 0L || !all(dim(self) >= 0L))
+  }
+  if (
+    !is.integer(dim(self)) || length(dim(self)) == 0L || !all(dim(self) >= 0L)
+  ) {
     return("dim(self) must be a non-empty non-negative integer vector")
-  if (!valid_dimnames(self))
-    return("dimnames(self) must be NULL or a list of either NULL or a character vector of length equal to its corresponding dimension")
+  }
+  if (!valid_dimnames(self)) {
+    return(
+      "dimnames(self) must be NULL or a list of either NULL or a character vector of length equal to its corresponding dimension"
+    )
+  }
   "is.array(self) is FALSE"
 }
 
 validate_formula <- function(self) {
-  if (is.null(environment(self)))
+  if (is.null(environment(self))) {
     return("environment(self) must be non-NULL")
-  if (identical(self, stats::formula(NULL, environment(self)))) # weird NULL case
+  }
+  if (identical(self, stats::formula(NULL, environment(self)))) {
+    # weird NULL case
     return(invisible(NULL))
-  if (!is.call(self) || !length(self) %in% 2:3 || unclass(self)[[1L]] != quote(`~`))
+  }
+  if (
+    !is.call(self) ||
+      !length(self) %in% 2:3 ||
+      unclass(self)[[1L]] != quote(`~`)
+  ) {
     return("must be a call to `~` of length 2 or 3")
+  }
 }
 
 #' S7 wrappers for key S3 classes
@@ -255,51 +358,66 @@ validate_formula <- function(self) {
 # * `class_matrix` for matrices.
 # * `class_array` for arrays.
 #' * `class_formula` for formulas.
+#'
+#' The concrete wrappers declare their supported attributes, so [new_object()]
+#' strips foreign attributes when constructing S7 subclasses.
 
 #'
 #' @export
 #' @name base_s3_classes
 #' @format NULL
 #' @order 3
-class_factor <- new_S3_class("factor",
-  constructor = function(.data = integer(), levels = NULL) {
+class_factor <- new_S3_class(
+  "factor",
+  constructor = new_S7_constructor(function(.data = integer(), levels = NULL) {
     levels <- levels %||% attr(.data, "levels", TRUE) %||% character()
     structure(.data, levels = levels, class = "factor")
-  },
-  validator = validate_factor
+  }),
+  validator = validate_factor,
+  default = quote(factor()),
+  attributes = c("levels", "names", "dim", "dimnames")
 )
 
 #' @export
 #' @rdname base_s3_classes
 #' @format NULL
 #' @order 3
-class_Date <- new_S3_class("Date",
-  constructor = function(.data = double()) {
+class_Date <- new_S3_class(
+  "Date",
+  constructor = new_S7_constructor(function(.data = double()) {
     .Date(.data)
-  },
-  validator = validate_date
+  }),
+  validator = validate_date,
+  default = quote(.Date(numeric())),
+  attributes = c("names", "dim", "dimnames")
 )
 
 #' @export
 #' @rdname base_s3_classes
 #' @format NULL
 #' @order 3
-class_POSIXct <- new_S3_class(c("POSIXct", "POSIXt"),
-  constructor = function(.data = double(), tz = "") {
+class_POSIXct <- new_S3_class(
+  c("POSIXct", "POSIXt"),
+  constructor = new_S7_constructor(function(.data = double(), tz = "") {
     .POSIXct(.data, tz = tz)
-  },
-  validator = validate_POSIXct
+  }),
+  validator = validate_POSIXct,
+  default = quote(.POSIXct(numeric(), tz = "")),
+  attributes = c("tzone", "names", "dim", "dimnames")
 )
 
 #' @export
 #' @rdname base_s3_classes
 #' @format NULL
 #' @order 3
-class_POSIXlt <- new_S3_class(c("POSIXlt", "POSIXt"),
-  constructor = function(.data = NULL, tz = "") {
+class_POSIXlt <- new_S3_class(
+  c("POSIXlt", "POSIXt"),
+  constructor = new_S7_constructor(function(.data = NULL, tz = "") {
     as.POSIXlt(.data, tz = tz)
-  },
-  validator = validate_POSIXlt
+  }),
+  validator = validate_POSIXlt,
+  default = quote(as.POSIXlt(NULL, tz = "")),
+  attributes = c("names", "tzone", "balanced")
 )
 
 #' @export
@@ -312,8 +430,9 @@ class_POSIXt <- new_S3_class("POSIXt") # abstract class
 #' @rdname base_s3_classes
 #' @format NULL
 #' @order 3
-class_data.frame <- new_S3_class("data.frame",
-  constructor = function(.data = list(), row.names = NULL) {
+class_data.frame <- new_S3_class(
+  "data.frame",
+  constructor = new_S7_constructor(function(.data = list(), row.names = NULL) {
     if (is.null(row.names)) {
       list2DF(.data)
     } else {
@@ -321,25 +440,34 @@ class_data.frame <- new_S3_class("data.frame",
       attr(out, "row.names") <- row.names
       out
     }
-  },
-  validator = validate_data.frame
+  }),
+  validator = validate_data.frame,
+  default = quote(data.frame()),
+  attributes = c("names", "row.names")
 )
 
 #  @export
 #  @rdname base_s3_classes
 #  @format NULL
 #  @order 3
-class_matrix <- new_S3_class("matrix",
-  constructor = function(.data = logical(), nrow = NULL, ncol = NULL, byrow = FALSE, dimnames = NULL) {
+class_matrix <- new_S3_class(
+  "matrix",
+  constructor = new_S7_constructor(function(
+    .data = logical(),
+    nrow = NULL,
+    ncol = NULL,
+    byrow = FALSE,
+    dimnames = NULL
+  ) {
     nrow <- nrow %||% NROW(.data)
-    if(is.null(ncol)) {
+    if (is.null(ncol)) {
       ncol <- NCOL(.data)
-      if(length(.data) != (nrow * ncol)) {
+      if (length(.data) != (nrow * ncol)) {
         ncol <- length(.data) %/% nrow
       }
     }
     matrix(.data, nrow, ncol, byrow, dimnames)
-  },
+  }),
   validator = validate_matrix
 )
 
@@ -347,12 +475,15 @@ class_matrix <- new_S3_class("matrix",
 #  @rdname base_s3_classes
 #  @format NULL
 #  @order 3
-class_array <- new_S3_class("array",
-  constructor = function(.data = logical(),
-                         dim = base::dim(.data) %||% length(.data),
-                         dimnames = base::dimnames(.data)) {
+class_array <- new_S3_class(
+  "array",
+  constructor = new_S7_constructor(function(
+    .data = logical(),
+    dim = base::dim(.data) %||% length(.data),
+    dimnames = base::dimnames(.data)
+  ) {
     array(.data, dim, dimnames)
-  },
+  }),
   validator = validate_array
 )
 
@@ -360,9 +491,14 @@ class_array <- new_S3_class("array",
 #' @rdname base_s3_classes
 #' @format NULL
 #' @order 3
-class_formula <- new_S3_class("formula",
-  constructor = function(.data = NULL, env = parent.frame()) {
-    stats::formula(.data, env = env)
-  },
-  validator = validate_formula
+class_formula <- new_S3_class(
+  "formula",
+  constructor = new_S7_constructor(
+    function(.data = NULL, env = parent.frame()) {
+      stats::formula(.data, env = env)
+    }
+  ),
+  validator = validate_formula,
+  default = quote(stats::formula(NULL)),
+  attributes = c(".Environment", "srcref")
 )

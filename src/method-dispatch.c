@@ -1,11 +1,5 @@
 #include "compat.h"
 
-#if (R_VERSION >= R_Version(4, 5, 0))
-#define getClosureFormals R_ClosureFormals
-#else
-#define getClosureFormals FORMALS
-#endif
-
 extern SEXP parent_sym;
 extern SEXP sym_ANY;
 extern SEXP ns_S7;
@@ -14,11 +8,12 @@ extern SEXP sym_dispatch_args;
 extern SEXP sym_methods;
 extern SEXP sym_S7_dispatch;
 extern SEXP sym_name;
+extern SEXP sym_u_dispatched_super;
 
 extern SEXP fn_base_quote;
-extern SEXP fn_base_missing;
-
+extern SEXP missing_call;
 extern SEXP R_TRUE;
+
 extern SEXP s7_proto_object;
 
 
@@ -80,6 +75,15 @@ SEXP method_rec(SEXP table, SEXP signature, R_xlen_t signature_itr) {
   return R_NilValue;
 }
 
+static inline
+int dispatch_arg_missing(SEXP name, SEXP envir) {
+  // Forwarding to function(x) missing(x) tests whether a value is available,
+  // including a default. Calling missing() directly in the generic instead
+  // tests whether the argument was supplied, even when it has a default.
+  SETCADR(missing_call, name);
+  return Rf_asLogical(Rf_eval(missing_call, envir));
+}
+
 SEXP generic_args(SEXP generic, SEXP envir) {
   // This function is only used to generate an informative message when
   // signalling an S7_method_lookup_error, so it doesn't need to be maximally efficient.
@@ -91,20 +95,12 @@ SEXP generic_args(SEXP generic, SEXP envir) {
   // Allocate a list to store the arguments
   SEXP args = PROTECT(Rf_allocVector(VECSXP, n_dispatch));
 
-  SEXP missing_call = PROTECT(Rf_lang2(fn_base_missing, R_NilValue));
-  PROTECT_INDEX pi;
-  PROTECT_WITH_INDEX(R_NilValue, &pi);
-
   // Find the value of each argument.
   SEXP formals = getClosureFormals(generic);
   for (R_xlen_t i = 0; i < n_dispatch; ++i) {
     SEXP name = TAG(formals);
 
-    SETCADR(missing_call, name);
-    SEXP is_missing = Rf_eval(missing_call, envir);
-    REPROTECT(is_missing, pi);
-
-    if (Rf_asLogical(is_missing))  {
+    if (dispatch_arg_missing(name, envir)) {
       SET_VECTOR_ELT(args, i, R_MissingArg);
     } else {
       // method_call_() has already done the necessary computation
@@ -115,7 +111,7 @@ SEXP generic_args(SEXP generic, SEXP envir) {
   }
   Rf_setAttrib(args, R_NamesSymbol, dispatch_args);
 
-  UNPROTECT(3);
+  UNPROTECT(1);
 
   return args;
 }
@@ -132,23 +128,36 @@ void S7_method_lookup_error(SEXP generic, SEXP envir) {
   while(1);
 }
 
-SEXP method_(SEXP generic, SEXP signature, SEXP envir, SEXP error_) {
-  if (!Rf_inherits(generic, "S7_generic")) {
+static inline
+SEXP as_S7_generic(SEXP generic) {
+  if (Rf_inherits(generic, "S7_generic")) {
+    return generic;
+  }
+
+  // Only R's trace wrapper may supply an original generic. Keep ordinary
+  // calls on the native class check without evaluating S4 inheritance.
+  if (Rf_isS4(generic) && Rf_inherits(generic, "S7_genericWithTrace")) {
+    SEXP original = Rf_getAttrib(generic, Rf_install("original"));
+    if (Rf_inherits(original, "S7_generic")) {
+      return original;
+    }
+  }
+
+  return R_NilValue;
+}
+
+SEXP method_(SEXP generic, SEXP signature) {
+  generic = as_S7_generic(generic);
+  if (generic == R_NilValue) {
     return R_NilValue;
   }
 
   SEXP table = Rf_getAttrib(generic, sym_methods);
   if (TYPEOF(table) != ENVSXP) {
-    Rf_error("Corrupt S7_generic: @methods isn't an environment");
+    Rf_error("Corrupt S7_generic: @methods isn't an environment.");
   }
 
-  SEXP m = method_rec(table, signature, 0);
-
-  if (m == R_NilValue && Rf_asLogical(error_)) {
-    S7_method_lookup_error(generic, envir);
-  }
-
-  return m;
+  return method_rec(table, signature, 0);
 }
 
 
@@ -162,13 +171,74 @@ SEXP S7_obj_dispatch(SEXP object) {
 }
 
 SEXP S7_object_(void) {
-  return Rf_duplicate(s7_proto_object);
+  // Share the cached class and version values; copy the attribute list.
+  return Rf_shallow_duplicate(s7_proto_object);
 }
+
+#if R_VERSION < R_Version(4, 4, 0)
+static void append_legacy_argument(SEXP* call_tail, SEXP* args_tail,
+                                   SEXP name, SEXP arg, SEXP expr) {
+  APPEND_NODE(*args_tail, name, arg);
+  *args_tail = CDR(*args_tail);
+
+  // Forward the original promise, but record its expression in the call.
+  // Dots forwarding can introduce nested promises.
+  while (TYPEOF(expr) == PROMSXP) {
+    expr = PREXPR(expr);
+  }
+  // Literal values supplied by do.call() retain base R's deparse limitations.
+  APPEND_NODE(*call_tail, name, expr);
+  *call_tail = CDR(*call_tail);
+}
+
+static SEXP method_call_legacy(SEXP mcall, SEXP method, SEXP envir) {
+  SEXP call = PROTECT(Rf_lcons(CAR(mcall), R_NilValue));
+  SEXP args = PROTECT(Rf_cons(R_NilValue, R_NilValue));
+  SEXP call_tail = call;
+  SEXP args_tail = args;
+
+  for (SEXP node = CDR(mcall); node != R_NilValue; node = CDR(node)) {
+    if (CAR(node) == R_DotsSymbol && TAG(node) == R_NilValue) {
+      SEXP dots = Rf_findVarInFrame(envir, R_DotsSymbol);
+      if (dots != R_NilValue && dots != R_MissingArg && TYPEOF(dots) != DOTSXP) {
+        Rf_error("'...' used in an incorrect context");
+      }
+      if (dots != R_MissingArg) {
+        for (; dots != R_NilValue; dots = CDR(dots)) {
+          append_legacy_argument(&call_tail, &args_tail,
+                                 TAG(dots), CAR(dots), CAR(dots));
+        }
+      }
+    } else {
+      // super() forwards its underlying value, but its original promise is
+      // still bound in the generic and supplies the diagnostic expression.
+      SEXP expr = Rf_findVarInFrame(envir, TAG(node));
+      append_legacy_argument(&call_tail, &args_tail, TAG(node), CAR(node), expr);
+    }
+  }
+
+  // R < 4.4 cannot deparse bare S7 objects embedded in promises. Its exported
+  // applyClosure() separates the diagnostic call from the runtime arguments.
+  // Both applyClosure() and promise access are internal APIs; keep this
+  // compatibility path restricted to the older R versions that expose them.
+  SEXP out = Rf_applyClosure(call, method, CDR(args), envir, R_NilValue);
+  UNPROTECT(2);
+  return out;
+}
+#endif
 
 SEXP method_call_(SEXP call_, SEXP op_, SEXP args_, SEXP env_) {
   args_ = CDR(args_);
   SEXP generic = CAR(args_); args_ = CDR(args_);
   SEXP envir = CAR(args_); args_ = CDR(args_);
+  SEXP fallback = CAR(args_);
+
+  generic = as_S7_generic(generic);
+  if (generic == R_NilValue) {
+    SEXP err_call = PROTECT(Rf_lang1(Rf_install("dispatch_not_generic_error")));
+    Rf_eval(err_call, ns_S7);
+    UNPROTECT(1); // never reached
+  }
 
   // Get the number of arguments to the generic
   SEXP formals = getClosureFormals(generic);
@@ -196,9 +266,10 @@ SEXP method_call_(SEXP call_, SEXP op_, SEXP args_, SEXP env_) {
     if (i < n_dispatch) {
 
       SEXP arg = Rf_findVarInFrame(envir, name);
-      if (arg == R_MissingArg) {
 
-        APPEND_NODE(mcall_tail, name, arg);
+      if (dispatch_arg_missing(name, envir)) {
+
+        APPEND_NODE(mcall_tail, name, R_MissingArg);
         SET_VECTOR_ELT(dispatch_classes, i, Rf_mkString("MISSING"));
 
       } else { // arg not missing, is a PROMSXP
@@ -215,6 +286,9 @@ SEXP method_call_(SEXP call_, SEXP op_, SEXP args_, SEXP env_) {
 
         if (Rf_inherits(val, "S7_super")) {
 
+          // Keep dispatch metadata in S7_dispatch()'s own frame. The method
+          // call is evaluated in the generic's frame (envir), not this frame.
+          Rf_defineVar(sym_u_dispatched_super, R_TRUE, env_);
 
           // Put the super() stored value into the method call.
           // Note: This means we don't pass along the arg PROMSXP, meaning that
@@ -253,7 +327,15 @@ SEXP method_call_(SEXP call_, SEXP op_, SEXP args_, SEXP env_) {
   }
 
   // Now that we have all the classes, we can look up what method to call
-  SEXP m = method_(generic, dispatch_classes, envir, R_TRUE);
+  SEXP m = method_(generic, dispatch_classes);
+  if (m == R_NilValue) {
+    // Operators can fall back without signalling a missing-method error.
+    if (fallback != R_NilValue) {
+      UNPROTECT(4);
+      return fallback;
+    }
+    S7_method_lookup_error(generic, envir);
+  }
   REPROTECT(m, val_pi); // unnecessary, for rchk only
 
   /// Inlining the method closure in the call like `SETCAR(mcall, m);`
@@ -269,7 +351,11 @@ SEXP method_call_(SEXP call_, SEXP op_, SEXP args_, SEXP env_) {
   Rf_defineVar(method_name, m, envir);
   SETCAR(mcall, method_name);
 
+#if R_VERSION < R_Version(4, 4, 0)
+  SEXP out = method_call_legacy(mcall, m, envir);
+#else
   SEXP out = Rf_eval(mcall, envir);
+#endif
   UNPROTECT(4);
   return out;
 }
